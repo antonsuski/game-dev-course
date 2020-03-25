@@ -1,1 +1,0 @@
-/usr/bin/g++ -fPIC -g  -shared -Wl,-soname,libhello_lib.so -o libhello_lib.so CMakeFiles/hello_lib.dir/source/hello.cxx.o 

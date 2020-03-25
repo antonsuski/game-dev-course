@@ -1,1 +1,0 @@
-/usr/bin/g++  -g   CMakeFiles/01_hello_static.dir/main.cxx.o  -o 01_hello_static  ../libs/libhello_lib.a 
