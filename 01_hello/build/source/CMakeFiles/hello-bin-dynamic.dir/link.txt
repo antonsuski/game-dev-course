@@ -1,0 +1,1 @@
+/usr/bin/c++     CMakeFiles/hello-bin-dynamic.dir/main.cxx.o  -o hello-bin-dynamic  -Wl,-rpath,/home/anton/Dev/repos/game-dev-course/01_hello/build/libs: ../libs/libhello-lib-dynamic.so 

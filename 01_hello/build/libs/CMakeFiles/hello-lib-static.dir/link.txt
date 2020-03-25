@@ -1,0 +1,2 @@
+/usr/bin/ar qc libhello-lib-static.a  CMakeFiles/hello-lib-static.dir/source/hello.cxx.o
+/usr/bin/ranlib libhello-lib-static.a

@@ -1,0 +1,1 @@
+/usr/bin/g++  -g  -static CMakeFiles/hello-bin-static.dir/main.cxx.o  -o hello-bin-static  ../libs/libhello-lib-static.a 

@@ -1,0 +1,1 @@
+/usr/bin/g++ -fPIC -g  -shared -Wl,-soname,libhello-lib-dynamic.so -o libhello-lib-dynamic.so CMakeFiles/hello-lib-dynamic.dir/source/hello.cxx.o 
