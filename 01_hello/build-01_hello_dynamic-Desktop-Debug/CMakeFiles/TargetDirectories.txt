@@ -1,0 +1,7 @@
+/home/anton/Dev/repos/game-dev-course/01_hello/build-01_hello_dynamic-Desktop-Debug/CMakeFiles/rebuild_cache.dir
+/home/anton/Dev/repos/game-dev-course/01_hello/build-01_hello_dynamic-Desktop-Debug/CMakeFiles/edit_cache.dir
+/home/anton/Dev/repos/game-dev-course/01_hello/build-01_hello_dynamic-Desktop-Debug/libs/CMakeFiles/rebuild_cache.dir
+/home/anton/Dev/repos/game-dev-course/01_hello/build-01_hello_dynamic-Desktop-Debug/libs/CMakeFiles/hello_lib.dir
+/home/anton/Dev/repos/game-dev-course/01_hello/build-01_hello_dynamic-Desktop-Debug/libs/CMakeFiles/edit_cache.dir
+/home/anton/Dev/repos/game-dev-course/01_hello/build-01_hello_dynamic-Desktop-Debug/source/CMakeFiles/rebuild_cache.dir
+/home/anton/Dev/repos/game-dev-course/01_hello/build-01_hello_dynamic-Desktop-Debug/source/CMakeFiles/edit_cache.dir

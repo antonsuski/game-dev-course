@@ -1,1 +1,0 @@
-/usr/bin/g++  -g   CMakeFiles/hello.dir/main.cxx.o  -o hello 
