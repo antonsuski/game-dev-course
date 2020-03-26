@@ -16,7 +16,7 @@ install:
 - sudo apt-get install -qq g++-6
 - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 90
 - sudo apt-get install cmake
-
+- cmake --version
 script:
 
 #task 1 01_hello_static
@@ -30,7 +30,7 @@ fi'
 - ./source/01_hello_static
   
 #task 1 01_hello_dynamic
-- cd 01_hello/01_hello_dynamic
+- cd ../../../01_hello/01_hello_dynamic
 - 'if [ ! -d "./build" ];
  then mkdir build;
 fi'
