@@ -16,7 +16,6 @@ install:
 - sudo apt-get install -qq g++-6
 - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 90
 - sudo apt-get install cmake
-- cmake --version
 script:
 
 #task 1 01_hello_static
