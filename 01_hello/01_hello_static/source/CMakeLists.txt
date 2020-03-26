@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.12)
 file(GLOB CXX "*.cxx")
 
 add_executable(${PROJECT_NAME} ${CXX})
