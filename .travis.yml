@@ -1,59 +1,37 @@
-dist:     trusty    # используем Ubuntu 14.04 Trusty Tahr (а не 12.02 Precise Pangolin)
-sudo:     required  # используем Virtual Machine (а не Docker container)
-
-language: cpp       # на практике разницы между специфичным для C++ окружением
-                    # и, скажем, python -- никакой. Но пусть будет cpp.
-
-os:
-    # будем прогонять CI и на Linux, и на Mac OS X...
-    - linux
-    - osx
+language: cpp
 
 compiler:
-    # ... и с помощью GCC, и Clang
-    - gcc
-    - clang
-    
-env:
-    # список переменных окружения, влияющих на матрицу сборки:
-    - TARGET_CPU=amd64 BUILD_CONFIGURATION=Debug
-    - TARGET_CPU=amd64 BUILD_CONFIGURATION=Release
-    - TARGET_CPU=x86 BUILD_CONFIGURATION=Debug
-    - TARGET_CPU=x86 BUILD_CONFIGURATION=Release
+ 	- gcc
 
-matrix:
-    exclude:
-        # вручную исключим ненужные элементы из матрицы сборки:
-        - os:       osx
-          compiler: gcc
+sudo: required
 
-        - os:  osx
-          env: TARGET_CPU=x86 BUILD_CONFIGURATION=Debug
-          
-        - os:  osx
-          env: TARGET_CPU=x86 BUILD_CONFIGURATION=Release
+before_install:
+	# C++14
+	- sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+	- sudo apt-get update -qq
 
 install:
-    # скрипт настройки среды и установки зависимостей:
-    - source ci/travis/install-$TRAVIS_OS_NAME.sh
+	# C++14
+	- sudo apt-get install -qq g++-6
+	- sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 90
 
 script:
-    # скрипт сборки и тестирования проекта:
-    - mkdir build
-    - cd build
-    - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_CONFIGURATION -DTARGET_CPU=$TARGET_CPU
-    - cmake --build .
-    - ctest --output-on-failure
+	#task 1 01_hello_static
+	  - cd 01_hello/01_hello_static
+	  - 'if [ ! -d "./build" ];
+		then mkdir build;
+	     fi'
+	  - cd build
+	  - cmake ..
+	  - make
+	  - ./source/01_hello_static
 
-deploy:
-    # выкладываем tagged-коммиты на GitHub Releases:
-    provider:     releases
-    file:         <package-file>
-    skip_cleanup: true
-    overwrite:    true
-
-    api_key:
-        secure:   <encrypted-github-token>
-
-    on:
-        tags:     true
+	#task 1 01_hello_dynamic
+	  - cd 01_hello/01_hello_dynamic
+	  - 'if [ ! -d "./build" ];
+		then mkdir build;
+	     fi'
+	  - cd build
+	  - cmake ..
+	  - make
+	  - ./source/01_hello_dynamic
