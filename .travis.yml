@@ -16,6 +16,7 @@ install:
  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 90
 
 script:
+
  #task 1 01_hello_static
    - cd 01_hello/01_hello_static
    - 'if [ ! -d "./build" ];
@@ -25,7 +26,8 @@ script:
   - cmake ..
   - make
   - ./source/01_hello_static
-	#task 1 01_hello_dynamic
+  
+#task 1 01_hello_dynamic
   - cd 01_hello/01_hello_dynamic
   - 'if [ ! -d "./build" ];
 	then mkdir build;
