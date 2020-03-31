@@ -19,14 +19,13 @@ install:
 script:
 
 #task 1 01_hello_static
-- cd 01_hello/01_hello_static
+- cd 01-hello
 - 'if [ ! -d "./build" ];
  then mkdir build;
 fi'
 - cd build
-- cmake ..
-- make
-- ./source/01_hello_static
+- cmake .. --build . --target 01-hello-static
+- ./source/01-hello-static
   
 #task 1 01_hello_dynamic
 - cd ../../../01_hello/01_hello_dynamic
