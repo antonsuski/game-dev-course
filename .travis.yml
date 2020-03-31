@@ -27,4 +27,5 @@ fi'
 - cmake ..
 - make 01-hello-static
 - ./bin/01-hello-static
+- make 01-hello-shared
 - ./bin/01-hello-shared
