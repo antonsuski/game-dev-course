@@ -28,6 +28,7 @@ install:
 - make -j$(nproc)
 - sudo make install
 - cmake --version
+- cd ~/
 
 script:
 
