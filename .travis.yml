@@ -25,8 +25,9 @@ script:
  then mkdir build;
 fi'
 - cd build
-- cmake .. --build . --target 01-hello-static
-- ./source/01-hello-static
+- cmake .. -G "Ninja"
+- ninja 01-hello-static
+- ./bin/01-hello-static
   
 #task 1 01_hello_dynamic
 - cd ../../../01_hello/01_hello_dynamic
