@@ -9,7 +9,7 @@ file(GLOB CXX "src/*.cxx"
 #-------------------SHARED---------------------------
 add_library(hello-lib-shared SHARED ${CXX} ${H})
 target_include_directories(hello-lib-shared PUBLIC
-                          "${CMAKE_CURRENT_SOURCE_DIR}/include")
+                          ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(hello-lib-shared PRIVATE cxx_std_11)
 
 #-------------------STATIC---------------------------
