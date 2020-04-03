@@ -14,9 +14,10 @@ find_library(SDL2lib libSDL2d.a)
 target_include_directories(${PROJECT_NAME}-static PRIVATE ${SDL2_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME}-static
                ${SDL2lib}
-               -lm
-               -ldl
-               -lpthread
-               -lrt
+#               -lm
+#               -ldl
+#               -lpthread
+#               -lrt
+                SDL2::SDL2-static
                )
 
