@@ -32,4 +32,15 @@ fi'
 - make 01-hello-shared
 - ./bin/01-hello-shared
 
+#task 2 02-sdl
+- cd ../../02-sdl
+- 'if [ ! -d "./build" ];
+ then mkdir build;
+fi'
+- cd build
+- cmake ..
+- make 
+- ./02-sdl-shared/02-sdl-shared
+- ./02-sdl-static/02-sdl-static
+
 
