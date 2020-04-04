@@ -16,12 +16,18 @@ before_install:
 install:
 - sudo apt-get install -qq g++-9
 - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 90
-- "(cd SDL2-2.0.12 && ./configure && make && sudo make install)"
+- cd SDL2-2.0.12
+- 'if [ ! -d "./build" ];
+ then mkdir build;
+fi'
+- cd build
+- cmake .. -DCMAKE_BUILD_TYPE=Debug
+- make && sudo make install
 
 script:
 
 #task 1 01-hello
-- cd 01-hello
+- cd ../../01-hello
 - 'if [ ! -d "./build" ];
  then mkdir build;
 fi'
