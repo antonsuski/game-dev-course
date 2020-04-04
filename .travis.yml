@@ -9,16 +9,18 @@ before_install:
 - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 - sudo apt-get update -qq
 - sudo -E apt-get update
+- sudo apt-get install libsdl2-2.0.12
+- wget https://www.libsdl.org/release/SDL2-2.0.12.tar.gz -O SDL2-2.0.12.tar.gz
+- tar -xzvf SDL2-2.0.12.tar.gz
 
 install:
 - sudo apt-get install -qq g++-9
 - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 90
-- sudo apt install cmake
-- cmake -version
+- "(cd SDL2-2.0.12 && ./configure && make && sudo make install)"
 
 script:
 
-#task 1 01_hello_static
+#task 1 01-hello
 - cd 01-hello
 - 'if [ ! -d "./build" ];
  then mkdir build;
