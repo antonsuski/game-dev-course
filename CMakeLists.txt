@@ -4,3 +4,4 @@ project(game-course-dev)
 
 add_subdirectory(01-hello)
 add_subdirectory(02-sdl)
+add_subdirectory(03-game-loop)
