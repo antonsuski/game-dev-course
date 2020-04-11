@@ -50,13 +50,13 @@ fi'
 - ./02-sdl-static/02-sdl-static
 
 #task 3 03-game-loop
-- cd ../../02-game-loop
+- cd ../../03-game-loop
 - 'if [ ! -d "./build" ];
  then mkdir build;
 fi'
 - cd build
 - cmake .. -DCMAKE_BUILD_TYPE=Debug
 - make 
-- ./src/03-game-loop-shared
+
 
 
