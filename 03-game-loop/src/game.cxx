@@ -1,14 +1,16 @@
-#include <engine.hxx>
 #include <iostream>
 #include <memory>
 
-int main()
+#include "engine.hxx"
+
+int main(int /*argc*/, char* /*argv*/[])
 {
     std::unique_ptr<engine::core, void (*)(engine::core*)> engine(
         engine::create_engine(), engine::destroy_engine);
 
     if (!engine->init())
     {
+        std::cerr << "init failed" << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -17,12 +19,12 @@ int main()
     {
         engine::event event;
 
-        while (engine->handle_event(event))
+        while (engine->read_event(event))
         {
             std::cout << event << std::endl;
-            switch (event)
+            switch (event.key)
             {
-                case engine::event::shut_down:
+                case engine::event::turn_off:
                     continue_loop = false;
                     break;
                 default:
@@ -30,6 +32,5 @@ int main()
             }
         }
     }
-
     return EXIT_SUCCESS;
 }

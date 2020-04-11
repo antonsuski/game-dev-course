@@ -1,29 +1,34 @@
+#include "engine.hxx"
 #include <SDL.h>
 #include <algorithm>
 #include <array>
-#include <engine.hxx>
-#include <string_view>
+#include <iostream>
+
+static std::ostream& operator<<(std::ostream& out, const SDL_version& v)
+{
+    out << static_cast<int>(v.major) << ".";
+    out << static_cast<int>(v.minor) << ".";
+    out << static_cast<int>(v.patch);
+    return out;
+}
 
 namespace engine
 {
-
-static std::array<std::string_view, 17> event_names = {
-    { "shut_down", "up_pushed", "down_pushed", "left_pushed", "right_pushed",
-      "start_pushed", "select_pushed", "button_1_pushed", "button_2_pushed",
-      "up_released", "down_released", "left_released", "right_released",
-      "start_released", "select_released", "button_1_released",
-      "button_2_released" }
-};
-
-std::ostream& operator<<(std::ostream& stream, const event e)
+std::ostream& operator<<(std::ostream& stream, const event& e)
 {
-    std::uint32_t value   = static_cast<std::uint32_t>(e);
-    std::uint32_t minimal = static_cast<std::uint32_t>(event::shut_down);
-    std::uint32_t maximal =
-        static_cast<std::uint32_t>(event::button_2_released);
+    std::uint32_t value   = static_cast<std::uint32_t>(e.key);
+    std::uint32_t minimal = static_cast<std::uint32_t>(event::up);
+    std::uint32_t maximal = static_cast<std::uint32_t>(event::turn_off);
     if (value >= minimal && value <= maximal)
     {
-        stream << event_names[value];
+        if (e.is_running)
+        {
+            stream << e.name;
+            stream << "_running";
+            return stream;
+        }
+        stream << e.name;
+        stream << "_is_finished";
         return stream;
     }
     else
@@ -34,43 +39,38 @@ std::ostream& operator<<(std::ostream& stream, const event e)
 
 struct bind
 {
-    bind(SDL_Keycode k, std::string_view s, event pushed, event released)
-        : key(k)
-        , name(s)
-        , event_pushed(pushed)
-        , event_released(released)
+    bind(SDL_Keycode bind_key, event bind_event)
+        : key(bind_key)
+        , e(bind_event)
     {
     }
 
-    SDL_Keycode      key;
-    std::string_view name;
-    event            event_pushed;
-    event            event_released;
+    SDL_Keycode key;
+    event       e;
 };
 
-const std::array<bind, 8> keys{
-    { { SDLK_w, "up", event::up_pushed, event::up_released },
-      { SDLK_a, "left", event::left_pushed, event::left_released },
-      { SDLK_s, "down", event::down_pushed, event::down_released },
-      { SDLK_d, "right", event::right_pushed, event::right_released },
-      { SDLK_LCTRL, "button1", event::button_1_pushed,
-        event::button_1_released },
-      { SDLK_SPACE, "button2", event::button_2_pushed,
-        event::button_2_released },
-      { SDLK_ESCAPE, "select", event::select_pushed, event::select_released },
-      { SDLK_RETURN, "start", event::start_pushed, event::start_released } }
-};
+const std::array<bind, 8> keys{ {
+    { SDLK_w, { event::up, "up", false } },
+    { SDLK_a, { event::left, "left", false } },
+    { SDLK_s, { event::down, "down", false } },
+    { SDLK_d, { event::right, "right", false } },
+    { SDLK_q, { event::button_1, "button_1", false } },
+    { SDLK_e, { event::button_2, "button_2", false } },
+    { SDLK_ESCAPE, { event::select, "select", false } },
+    { SDLK_RETURN, { event::start, "start", false } },
+} };
 
-static bool check_event(const SDL_Event& e, const bind*& result)
+static bool check_event(const SDL_Event& sdl_event, const bind*& key)
 {
     using namespace std;
+
     const auto it = find_if(begin(keys), end(keys), [&](const bind& b) {
-        return b.key == e.key.keysym.sym;
+        return b.key == sdl_event.key.keysym.sym;
     });
 
     if (it != end(keys))
     {
-        result = &(*it);
+        key = &(*it);
         return true;
     }
     return false;
@@ -79,69 +79,78 @@ static bool check_event(const SDL_Event& e, const bind*& result)
 class core_one final : public core
 {
 public:
-    SDL_Window*  Window  = nullptr;
-    SDL_Surface* Surface = nullptr;
-
+    ~core_one() final override {}
     bool init() final override
     {
+        SDL_version compiled = { 0, 0, 0 };
+        SDL_version linked   = { 0, 0, 0 };
+
+        SDL_VERSION(&compiled)
+        SDL_GetVersion(&linked);
+
+        if (SDL_COMPILEDVERSION !=
+            SDL_VERSIONNUM(linked.major, linked.minor, linked.patch))
+        {
+            std::cerr << "warning: SDL2 compiled and linked version mismatch: "
+                      << compiled << " " << linked << std::endl;
+        }
+
         if (SDL_Init(SDL_INIT_EVERYTHING))
         {
             std::cerr << "init failed sdl_error: " << SDL_GetError()
                       << std::endl;
             return false;
         }
-        Window = SDL_CreateWindow("SDL Tutorial", SDL_WINDOWPOS_UNDEFINED,
-                                  SDL_WINDOWPOS_UNDEFINED, 640, 480,
-                                  SDL_WINDOW_SHOWN);
-        if (Window == nullptr)
-        {
-            std::cerr << "create window faled sdl_error: " << SDL_GetError()
-                      << std::endl;
-            return false;
-        }
         else
         {
-            Surface = SDL_GetWindowSurface(Window);
-            if (Surface == nullptr)
+            SDL_Window* const window = SDL_CreateWindow(
+                "title", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 320,
+                240, SDL_WINDOW_SHOWN);
+            if (window == nullptr)
             {
-                std::cerr << "get surface faled sdl_error: " << SDL_GetError();
+                std::cerr << "create windoe failed sdl_error: "
+                          << SDL_GetError() << std::endl;
+                return false;
             }
         }
         return true;
     }
-    bool handle_event(event& e) final override
+    bool read_event(event& e) final override
     {
         SDL_Event sdl_event;
         if (SDL_PollEvent(&sdl_event))
         {
-            const bind* binding = nullptr;
+            const bind* key = nullptr;
             if (sdl_event.type == SDL_QUIT)
             {
-                e = event::shut_down;
+                e.key  = event::turn_off;
+                e.name = "turn_off";
                 return true;
             }
-            else if (sdl_event.type == SDL_KEYDOWN)
+            if (sdl_event.type == SDL_KEYDOWN)
             {
-                if (check_event(sdl_event, binding))
+                if (check_event(sdl_event, key))
                 {
-                    e = binding->event_pushed;
+                    e.key        = key->e.key;
+                    e.name       = key->e.name;
+                    e.is_running = true;
                     return true;
                 }
             }
-            else if (sdl_event.type == SDL_KEYUP)
+            if (sdl_event.type == SDL_KEYUP)
             {
-                if (check_event(sdl_event, binding))
+                if (check_event(sdl_event, key))
                 {
-                    e = binding->event_released;
+                    e.key        = key->e.key;
+                    e.name       = key->e.name;
+                    e.is_running = false;
                     return true;
                 }
             }
         }
         return false;
     }
-
-    ~core_one() final override {}
-}; // namespace engine
+};
 
 static bool already_exist = false;
 
@@ -168,5 +177,6 @@ void destroy_engine(core* e)
     }
     delete e;
 }
-engine::core::~core() {}
+
+core::~core(){};
 } // namespace engine
