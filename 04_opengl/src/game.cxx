@@ -1,3 +1,5 @@
+#include <cassert>
+#include <fstream>
 #include <iostream>
 #include <memory>
 
@@ -32,11 +34,18 @@ int main(int /*argc*/, char* /*argv*/[])
             }
         }
 
-        // engine::triangle tr();
+        std::ifstream file("vertexes.txt");
+        assert(!!file);
 
-        engine->render();
+        engine::triangle tr;
+        file >> tr;
 
-        // engine->swap_buffers();
+        engine->render_triangle(tr);
+
+        file >> tr;
+        engine->render_triangle(tr);
+
+        engine->swap_buffers();
     }
     return EXIT_SUCCESS;
 }

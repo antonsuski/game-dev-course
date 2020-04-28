@@ -45,10 +45,12 @@ struct ENGINE_DECLSPEC vertex
     vertex()
         : x(0.f)
         , y(0.f)
+        , z(0.f)
     {
     }
     float x;
     float y;
+    float z;
 };
 
 struct ENGINE_DECLSPEC triangle
@@ -62,15 +64,20 @@ struct ENGINE_DECLSPEC triangle
     vertex v[3];
 };
 
+ENGINE_DECLSPEC std::istream& operator>>(std::istream& is, vertex&);
+ENGINE_DECLSPEC std::istream& operator>>(std::istream& is, triangle&);
+
 class ENGINE_DECLSPEC core
 {
 public:
-    virtual ~core()                 = 0;
-    virtual bool init()             = 0;
-    virtual bool read_event(event&) = 0;
-    virtual void render()           = 0;
-    virtual void swap_buffers()     = 0;
-    virtual void uninitialize()     = 0;
+    virtual ~core()                                  = 0;
+    virtual bool init()                              = 0;
+    virtual bool read_event(event&)                  = 0;
+    virtual void render()                            = 0;
+    virtual void swap_buffers()                      = 0;
+    virtual void uninitialize()                      = 0;
+    virtual void render_triangle(const triangle&)    = 0;
+    virtual void render_my_triangle(const triangle&) = 0;
 };
 ENGINE_DECLSPEC engine::core* create_engine();
 ENGINE_DECLSPEC void          destroy_engine(engine::core* e);

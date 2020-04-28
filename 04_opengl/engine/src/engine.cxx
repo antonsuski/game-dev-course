@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <fstream>
 #include <iostream>
 
 #define OM_GL_CHECK()                                                          \
@@ -135,6 +136,22 @@ static std::ostream& operator<<(std::ostream& out, const SDL_version& v)
 
 namespace engine
 {
+std::istream& operator>>(std::istream& is, vertex& v)
+{
+    is >> v.x;
+    is >> v.y;
+    is >> v.z;
+    return is;
+}
+
+std::istream& operator>>(std::istream& is, triangle& t)
+{
+    is >> t.v[0];
+    is >> t.v[1];
+    is >> t.v[2];
+    return is;
+}
+
 std::ostream& operator<<(std::ostream& stream, const event& e)
 {
     std::uint32_t value   = static_cast<std::uint32_t>(e.key);
@@ -203,9 +220,294 @@ private:
     SDL_Window*   window      = nullptr;
     SDL_GLContext gl_context  = nullptr;
     GLuint        program_id_ = 0;
+    GLuint        VBO         = 0;
+    GLuint        shd_proc    = 0;
 
 public:
     ~core_one() final override {}
+
+    bool init_my_opengl()
+    {
+        std::ifstream file("vertexes.txt");
+        assert(!!file);
+
+        engine::triangle tr;
+        file >> tr;
+        glGenBuffers(1, &VBO);
+        OM_GL_CHECK()
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        OM_GL_CHECK()
+        glBufferData(GL_ARRAY_BUFFER, sizeof(tr.v), &tr.v, GL_STATIC_DRAW);
+        OM_GL_CHECK()
+
+        // vertex shader
+        std::string_view vertex_shader_src = R"(
+                #version 320 es
+                layout(location = 0) in vec3 aPos;
+
+                void main()
+                {
+                    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 0.0);
+                }
+                                             )";
+
+        const char* source      = vertex_shader_src.data();
+        GLuint      vert_shader = glCreateShader(GL_VERTEX_SHADER);
+        glShaderSource(vert_shader, 1, &source, nullptr);
+        OM_GL_CHECK()
+
+        glCompileShader(vert_shader);
+        OM_GL_CHECK()
+
+        GLint compiled_status = 0;
+        glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &compiled_status);
+        OM_GL_CHECK()
+
+        if (compiled_status == 0)
+        {
+            GLint info_len = 0;
+            glGetShaderiv(vert_shader, GL_INFO_LOG_LENGTH, &info_len);
+            OM_GL_CHECK()
+
+            std::vector<char> info_chars(static_cast<size_t>(info_len));
+            glGetShaderInfoLog(vert_shader, info_len, nullptr,
+                               info_chars.data());
+            OM_GL_CHECK()
+
+            glDeleteShader(vert_shader);
+            OM_GL_CHECK()
+
+            std::string shader_type_name = "vertex";
+            std::cerr << "Error compiling shader(vertex)\n"
+                      << vertex_shader_src << "\n"
+                      << info_chars.data();
+            return false;
+        }
+
+        // fragment shader
+        std::string_view frag_shader_src = R"(
+            #version 320 es
+            mediump out vec4 FragColor;
+            void main()
+            {
+                FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+            }
+            )";
+
+        source             = frag_shader_src.data();
+        GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
+        glShaderSource(frag_shader, 1, &source, nullptr);
+        OM_GL_CHECK()
+
+        glCompileShader(frag_shader);
+        OM_GL_CHECK()
+
+        compiled_status = 0;
+        glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &compiled_status);
+        OM_GL_CHECK()
+        if (compiled_status == 0)
+        {
+            GLint info_len = 0;
+            glGetShaderiv(frag_shader, GL_INFO_LOG_LENGTH, &info_len);
+            OM_GL_CHECK()
+
+            std::vector<char> info_chars(static_cast<size_t>(info_len));
+            glGetShaderInfoLog(frag_shader, info_len, nullptr,
+                               info_chars.data());
+            OM_GL_CHECK()
+
+            glDeleteShader(frag_shader);
+            OM_GL_CHECK()
+
+            std::cerr << "Error compiling shader(fragment)\n"
+                      << vertex_shader_src << "\n"
+                      << info_chars.data();
+            return false;
+        }
+
+        shd_proc = glCreateProgram();
+        OM_GL_CHECK()
+        if (0 == shd_proc)
+        {
+            std::cerr << "failed to create gl program";
+            return false;
+        }
+
+        glAttachShader(shd_proc, vert_shader);
+        OM_GL_CHECK()
+
+        glAttachShader(shd_proc, frag_shader);
+        OM_GL_CHECK()
+
+        glLinkProgram(shd_proc);
+        OM_GL_CHECK()
+
+        GLint linked_status = 0;
+        glGetProgramiv(shd_proc, GL_LINK_STATUS, &linked_status);
+        OM_GL_CHECK()
+        if (linked_status == 0)
+        {
+            GLint infoLen = 0;
+            glGetProgramiv(shd_proc, GL_INFO_LOG_LENGTH, &infoLen);
+            OM_GL_CHECK()
+            std::vector<char> infoLog(static_cast<size_t>(infoLen));
+            glGetProgramInfoLog(shd_proc, infoLen, nullptr, infoLog.data());
+            OM_GL_CHECK()
+            std::cerr << "Error linking program:\n" << infoLog.data();
+            glDeleteProgram(shd_proc);
+            OM_GL_CHECK()
+            return false;
+        }
+        glUseProgram(shd_proc);
+        OM_GL_CHECK()
+
+        return true;
+    }
+
+    bool init_opengl()
+    {
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(callback_opengl_debug, nullptr);
+        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0,
+                              nullptr, GL_TRUE);
+        init_my_opengl();
+        GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
+        OM_GL_CHECK()
+        std::string_view vertex_shader_src = R"(
+                                        attribute vec3 a_position;
+                                        varying vec4 v_position;
+
+                                        void main()
+                                        {
+                                            v_position = vec4(a_position, 1.0);
+                                            gl_Position = v_position;
+                                        }
+                                        )";
+        const char*      source            = vertex_shader_src.data();
+        glShaderSource(vert_shader, 1, &source, nullptr);
+        OM_GL_CHECK()
+
+        glCompileShader(vert_shader);
+        OM_GL_CHECK()
+
+        GLint compiled_status = 0;
+        glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &compiled_status);
+        OM_GL_CHECK()
+        if (compiled_status == 0)
+        {
+            GLint info_len = 0;
+            glGetShaderiv(vert_shader, GL_INFO_LOG_LENGTH, &info_len);
+            OM_GL_CHECK()
+            std::vector<char> info_chars(static_cast<size_t>(info_len));
+            glGetShaderInfoLog(vert_shader, info_len, nullptr,
+                               info_chars.data());
+            OM_GL_CHECK()
+            glDeleteShader(vert_shader);
+            OM_GL_CHECK()
+
+            std::string shader_type_name = "vertex";
+            std::cerr << "Error compiling shader(vertex)\n"
+                      << vertex_shader_src << "\n"
+                      << info_chars.data();
+            return false;
+        }
+        // fargmemt shader
+        GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+        OM_GL_CHECK()
+        std::string_view fragment_shader_src = R"(
+                          precision mediump float;
+                          varying mediump vec4 v_position;
+
+                          void main()
+                          {
+                              if (v_position.z >= 0.0)
+                              {
+                                  float light_green = 0.5 + v_position.z / 2.0;
+                                  gl_FragColor = vec4(0.0, light_green, 0.0, 1.0);
+                              } else
+                              {
+                                  float color = 0.5 - (v_position.z / -2.0);
+                                  gl_FragColor = vec4(color, 0.0, 0.0, 1.0);
+                              }
+                          }
+                          )";
+        source                               = fragment_shader_src.data();
+        glShaderSource(fragment_shader, 1, &source, nullptr);
+        OM_GL_CHECK()
+
+        glCompileShader(fragment_shader);
+        OM_GL_CHECK()
+
+        compiled_status = 0;
+        glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &compiled_status);
+        OM_GL_CHECK()
+        if (compiled_status == 0)
+        {
+            GLint info_len = 0;
+            glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &info_len);
+            OM_GL_CHECK()
+            std::vector<char> info_chars(static_cast<size_t>(info_len));
+            glGetShaderInfoLog(fragment_shader, info_len, nullptr,
+                               info_chars.data());
+            OM_GL_CHECK()
+            glDeleteShader(fragment_shader);
+            OM_GL_CHECK()
+
+            std::cerr << "Error compiling shader(fragment)\n"
+                      << vertex_shader_src << "\n"
+                      << info_chars.data();
+            return false;
+        }
+
+        // now create program and attach vertex and fragment shaders
+
+        program_id_ = glCreateProgram();
+        OM_GL_CHECK()
+        if (0 == program_id_)
+        {
+            std::cerr << "failed to create gl program";
+            return false;
+        }
+
+        glAttachShader(program_id_, vert_shader);
+        OM_GL_CHECK()
+        glAttachShader(program_id_, fragment_shader);
+        OM_GL_CHECK()
+
+        // bind attribute location
+        glBindAttribLocation(program_id_, 0, "a_position");
+        OM_GL_CHECK()
+        // link program after binding attribute locations
+        glLinkProgram(program_id_);
+        OM_GL_CHECK()
+        // Check the link status
+        GLint linked_status = 0;
+        glGetProgramiv(program_id_, GL_LINK_STATUS, &linked_status);
+        OM_GL_CHECK()
+        if (linked_status == 0)
+        {
+            GLint infoLen = 0;
+            glGetProgramiv(program_id_, GL_INFO_LOG_LENGTH, &infoLen);
+            OM_GL_CHECK()
+            std::vector<char> infoLog(static_cast<size_t>(infoLen));
+            glGetProgramInfoLog(program_id_, infoLen, nullptr, infoLog.data());
+            OM_GL_CHECK()
+            std::cerr << "Error linking program:\n" << infoLog.data();
+            glDeleteProgram(program_id_);
+            OM_GL_CHECK()
+            return false;
+        }
+
+        // turn on rendering with just created shader program
+        glUseProgram(program_id_);
+        OM_GL_CHECK()
+
+        glEnable(GL_DEPTH_TEST);
+        // glDisable(GL_DEPTH_TEST);
+        return true;
+    }
+
     bool init() final override
     {
         SDL_version compiled = { 0, 0, 0 };
@@ -230,7 +532,7 @@ public:
         else
         {
             window = SDL_CreateWindow("title", SDL_WINDOWPOS_CENTERED,
-                                      SDL_WINDOWPOS_CENTERED, 320, 240,
+                                      SDL_WINDOWPOS_CENTERED, 640, 480,
                                       SDL_WINDOW_OPENGL);
             if (window == nullptr)
             {
@@ -275,15 +577,8 @@ public:
             {
                 std::clog << "error: failed to initialize glad" << std::endl;
             }
-
-            glEnable(GL_DEBUG_OUTPUT);
-            glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-            glDebugMessageCallback(callback_opengl_debug, nullptr);
-            glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0,
-                                  nullptr, GL_TRUE);
-
-            return true;
         }
+        return init_opengl();
     }
     bool read_event(event& e) final override
     {
@@ -341,11 +636,41 @@ public:
         OM_GL_CHECK()
     }
 
-    void uninitialize()
+    void uninitialize() final override
     {
         SDL_GL_DeleteContext(gl_context);
         SDL_DestroyWindow(window);
         SDL_Quit();
+    }
+
+    void render_my_triangle(const triangle& t) final override {}
+
+    void render_triangle(const triangle& t) final override
+    {
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex),
+                              &t.v[0]);
+        OM_GL_CHECK()
+        glEnableVertexAttribArray(0);
+        OM_GL_CHECK()
+        glValidateProgram(program_id_);
+        OM_GL_CHECK()
+        // Check the validate status
+        GLint validate_status = 0;
+        glGetProgramiv(program_id_, GL_VALIDATE_STATUS, &validate_status);
+        OM_GL_CHECK()
+        if (validate_status == GL_FALSE)
+        {
+            GLint infoLen = 0;
+            glGetProgramiv(program_id_, GL_INFO_LOG_LENGTH, &infoLen);
+            OM_GL_CHECK()
+            std::vector<char> infoLog(static_cast<size_t>(infoLen));
+            glGetProgramInfoLog(program_id_, infoLen, nullptr, infoLog.data());
+            OM_GL_CHECK()
+            std::cerr << "Error linking program:\n" << infoLog.data();
+            throw std::runtime_error("error");
+        }
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        OM_GL_CHECK()
     }
 };
 
