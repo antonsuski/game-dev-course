@@ -221,6 +221,7 @@ private:
     SDL_GLContext gl_context  = nullptr;
     GLuint        program_id_ = 0;
     GLuint        VBO         = 0;
+    GLuint        VAO         = 0;
     GLuint        shd_proc    = 0;
 
 public:
@@ -228,19 +229,24 @@ public:
 
     bool init_my_opengl()
     {
-        std::ifstream file("vertexes.txt");
-        assert(!!file);
+        // enable debug
 
-        engine::triangle tr;
-        file >> tr;
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(callback_opengl_debug, nullptr);
+        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0,
+                              nullptr, GL_TRUE);
+
+        // gen buffers
+
         glGenBuffers(1, &VBO);
         OM_GL_CHECK()
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        OM_GL_CHECK()
-        glBufferData(GL_ARRAY_BUFFER, sizeof(tr.v), &tr.v, GL_STATIC_DRAW);
+
+        glGenVertexArrays(1, &VAO);
         OM_GL_CHECK()
 
         // vertex shader
+
         std::string_view vertex_shader_src = R"(
                 #version 320 es
                 layout(location = 0) in vec3 aPos;
@@ -285,6 +291,7 @@ public:
         }
 
         // fragment shader
+
         std::string_view frag_shader_src = R"(
             #version 320 es
             mediump out vec4 FragColor;
@@ -325,6 +332,8 @@ public:
             return false;
         }
 
+        // create shader programm
+
         shd_proc = glCreateProgram();
         OM_GL_CHECK()
         if (0 == shd_proc)
@@ -361,6 +370,8 @@ public:
         glUseProgram(shd_proc);
         OM_GL_CHECK()
 
+        glEnable(GL_DEPTH_TEST);
+        OM_GL_CHECK()
         return true;
     }
 
@@ -371,7 +382,7 @@ public:
         glDebugMessageCallback(callback_opengl_debug, nullptr);
         glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0,
                               nullptr, GL_TRUE);
-        init_my_opengl();
+        // init_my_opengl();
         GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
         OM_GL_CHECK()
         std::string_view vertex_shader_src = R"(
@@ -457,6 +468,9 @@ public:
             std::cerr << "Error compiling shader(fragment)\n"
                       << vertex_shader_src << "\n"
                       << info_chars.data();
+
+            glEnable(GL_DEPTH_TEST);
+
             return false;
         }
 
@@ -643,7 +657,30 @@ public:
         SDL_Quit();
     }
 
-    void render_my_triangle(const triangle& t) final override {}
+    void render_my_triangle(const triangle& t) final override
+    {
+        glBindVertexArray(VAO);
+        OM_GL_CHECK()
+
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        OM_GL_CHECK()
+
+        glBufferData(GL_ARRAY_BUFFER, sizeof(t), &t.v, GL_STATIC_DRAW);
+        OM_GL_CHECK()
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex),
+                              &t.v[0]);
+        OM_GL_CHECK()
+
+        glEnableVertexAttribArray(0);
+        OM_GL_CHECK()
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        OM_GL_CHECK()
+
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        OM_GL_CHECK()
+    }
 
     void render_triangle(const triangle& t) final override
     {
