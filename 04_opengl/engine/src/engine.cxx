@@ -141,6 +141,9 @@ std::istream& operator>>(std::istream& is, vertex& v)
     is >> v.x;
     is >> v.y;
     is >> v.z;
+    is >> v.r;
+    is >> v.g;
+    is >> v.b;
     return is;
 }
 
@@ -227,7 +230,17 @@ private:
 public:
     ~core_one() final override {}
 
-    bool init_my_opengl()
+    void genBuffers()
+    {
+
+        glGenBuffers(1, &VBO);
+        OM_GL_CHECK()
+
+        glGenVertexArrays(1, &VAO);
+        OM_GL_CHECK()
+    }
+
+    bool init_my_opengl() final override
     {
         // enable debug
 
@@ -238,22 +251,21 @@ public:
                               nullptr, GL_TRUE);
 
         // gen buffers
-
-        glGenBuffers(1, &VBO);
-        OM_GL_CHECK()
-
-        glGenVertexArrays(1, &VAO);
-        OM_GL_CHECK()
-
+        genBuffers();
         // vertex shader
 
         std::string_view vertex_shader_src = R"(
                 #version 320 es
-                layout(location = 0) in vec3 aPos;
+
+                layout(location = 0) in vec3 pos;
+                layout(location = 1) in vec3 color;
+
+                mediump out vec3 out_color;
 
                 void main()
                 {
-                    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 0.0);
+                    gl_Position = vec4(pos, 1.0);
+                    out_color = color;
                 }
                                              )";
 
@@ -293,13 +305,16 @@ public:
         // fragment shader
 
         std::string_view frag_shader_src = R"(
-            #version 320 es
-            mediump out vec4 FragColor;
-            void main()
-            {
-                FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-            }
-            )";
+                #version 320 es
+
+                mediump out vec4 FragColor;
+                mediump in vec3 out_color;
+
+                void main()
+                {
+                    FragColor = vec4(out_color, 0.0);
+                }
+                )";
 
         source             = frag_shader_src.data();
         GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -383,6 +398,7 @@ public:
         glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0,
                               nullptr, GL_TRUE);
         // init_my_opengl();
+        genBuffers();
         GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
         OM_GL_CHECK()
         std::string_view vertex_shader_src = R"(
@@ -592,7 +608,7 @@ public:
                 std::clog << "error: failed to initialize glad" << std::endl;
             }
         }
-        return init_opengl();
+        return init_my_opengl();
     }
     bool read_event(event& e) final override
     {
@@ -659,6 +675,11 @@ public:
 
     void render_my_triangle(const triangle& t) final override
     {
+        //        float vertices[] = {
+        //            -0.5f, -0.5f, 0.0f, // левая вершина
+        //            0.5f,  -0.5f, 0.0f, // правая вершина
+        //            0.0f,  0.5f,  0.0f  // верхняя вершина
+        //        };
         glBindVertexArray(VAO);
         OM_GL_CHECK()
 
@@ -669,11 +690,40 @@ public:
         OM_GL_CHECK()
 
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex),
-                              &t.v[0]);
+                              nullptr);
         OM_GL_CHECK()
 
         glEnableVertexAttribArray(0);
         OM_GL_CHECK()
+
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(vertex),
+                              reinterpret_cast<void*>(sizeof(float) * 3));
+        OM_GL_CHECK()
+
+        glEnableVertexAttribArray(1);
+        OM_GL_CHECK()
+
+        GLuint shd_proc_value = shd_proc;
+
+        glValidateProgram(shd_proc_value);
+        OM_GL_CHECK()
+        // Check the validate status
+        GLint validate_status = 0;
+        glGetProgramiv(shd_proc_value, GL_VALIDATE_STATUS, &validate_status);
+        OM_GL_CHECK()
+
+        if (validate_status == GL_FALSE)
+        {
+            GLint infoLen = 0;
+            glGetProgramiv(shd_proc_value, GL_INFO_LOG_LENGTH, &infoLen);
+            OM_GL_CHECK()
+            std::vector<char> infoLog(static_cast<size_t>(infoLen));
+            glGetProgramInfoLog(shd_proc_value, infoLen, nullptr,
+                                infoLog.data());
+            OM_GL_CHECK()
+            std::cerr << "Error linking program:\n" << infoLog.data();
+            throw std::runtime_error("error");
+        }
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         OM_GL_CHECK()

@@ -46,11 +46,17 @@ struct ENGINE_DECLSPEC vertex
         : x(0.f)
         , y(0.f)
         , z(0.f)
+        , r(0.f)
+        , g(0.f)
+        , b(0.f)
     {
     }
     float x;
     float y;
     float z;
+    float r;
+    float g;
+    float b;
 };
 
 struct ENGINE_DECLSPEC triangle
@@ -78,6 +84,7 @@ public:
     virtual void uninitialize()                      = 0;
     virtual void render_triangle(const triangle&)    = 0;
     virtual void render_my_triangle(const triangle&) = 0;
+    virtual bool init_my_opengl()                    = 0;
 };
 ENGINE_DECLSPEC engine::core* create_engine();
 ENGINE_DECLSPEC void          destroy_engine(engine::core* e);

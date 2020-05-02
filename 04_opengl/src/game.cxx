@@ -40,10 +40,12 @@ int main(int /*argc*/, char* /*argv*/[])
         engine::triangle tr;
         file >> tr;
 
-        engine->render_triangle(tr);
+        // engine->render_triangle(tr);
+        engine->render_my_triangle(tr);
 
         file >> tr;
-        engine->render_triangle(tr);
+        // engine->render_triangle(tr);
+        engine->render_my_triangle(tr);
 
         engine->swap_buffers();
     }
