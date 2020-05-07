@@ -42,7 +42,8 @@ void line_render::draw(pixels p_map, color& c)
 
 pixels line_render::get_points(point& a, point& b)
 {
-    point tmp_point{ a.x_pos, a.y_pos };
+    point  tmp_point{ a.x_pos, a.y_pos };
+    pixels result;
 
     int x0 = static_cast<int>(a.x_pos);
     int y0 = static_cast<int>(a.y_pos);
@@ -96,6 +97,7 @@ pixels line_render::get_points(point& a, point& b)
             }
         }
     }
+    return result;
 }
 
 } // namespace render

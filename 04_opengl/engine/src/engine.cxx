@@ -1,5 +1,6 @@
 #include "engine.hxx"
 #include "glad/glad.h"
+#include "om_gl_check.hxx"
 
 #include <SDL.h>
 #include <algorithm>
@@ -8,124 +9,6 @@
 #include <fstream>
 #include <iostream>
 
-#define OM_GL_CHECK()                                                          \
-    {                                                                          \
-        const int err = static_cast<int>(glGetError());                        \
-        if (err != GL_NO_ERROR)                                                \
-        {                                                                      \
-            switch (err)                                                       \
-            {                                                                  \
-                case GL_INVALID_ENUM:                                          \
-                    std::cerr << GL_INVALID_ENUM << std::endl;                 \
-                    break;                                                     \
-                case GL_INVALID_VALUE:                                         \
-                    std::cerr << GL_INVALID_VALUE << std::endl;                \
-                    break;                                                     \
-                case GL_INVALID_OPERATION:                                     \
-                    std::cerr << GL_INVALID_OPERATION << std::endl;            \
-                    break;                                                     \
-                case GL_INVALID_FRAMEBUFFER_OPERATION:                         \
-                    std::cerr << GL_INVALID_FRAMEBUFFER_OPERATION              \
-                              << std::endl;                                    \
-                    break;                                                     \
-                case GL_OUT_OF_MEMORY:                                         \
-                    std::cerr << GL_OUT_OF_MEMORY << std::endl;                \
-                    break;                                                     \
-            }                                                                  \
-            assert(false);                                                     \
-        }                                                                      \
-    }
-
-static std::array<char, GL_MAX_DEBUG_MESSAGE_LENGTH> local_log_buff;
-
-static const char* source_to_strv(GLenum source)
-{
-    switch (source)
-    {
-        case GL_DEBUG_SOURCE_API:
-            return "API";
-        case GL_DEBUG_SOURCE_SHADER_COMPILER:
-            return "SHADER_COMPILER";
-        case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
-            return "WINDOW_SYSTEM";
-        case GL_DEBUG_SOURCE_THIRD_PARTY:
-            return "THIRD_PARTY";
-        case GL_DEBUG_SOURCE_APPLICATION:
-            return "APPLICATION";
-        case GL_DEBUG_SOURCE_OTHER:
-            return "OTHER";
-    }
-    return "unknown";
-}
-
-static const char* type_to_strv(GLenum type)
-{
-    switch (type)
-    {
-        case GL_DEBUG_TYPE_ERROR:
-            return "ERROR";
-        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-            return "DEPRECATED_BEHAVIOR";
-        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-            return "UNDEFINED_BEHAVIOR";
-        case GL_DEBUG_TYPE_PERFORMANCE:
-            return "PERFORMANCE";
-        case GL_DEBUG_TYPE_PORTABILITY:
-            return "PORTABILITY";
-        case GL_DEBUG_TYPE_MARKER:
-            return "MARKER";
-        case GL_DEBUG_TYPE_PUSH_GROUP:
-            return "PUSH_GROUP";
-        case GL_DEBUG_TYPE_POP_GROUP:
-            return "POP_GROUP";
-        case GL_DEBUG_TYPE_OTHER:
-            return "OTHER";
-    }
-    return "unknown";
-}
-
-static const char* severity_to_strv(GLenum severity)
-{
-    switch (severity)
-    {
-        case GL_DEBUG_SEVERITY_HIGH:
-            return "HIGH";
-        case GL_DEBUG_SEVERITY_MEDIUM:
-            return "MEDIUM";
-        case GL_DEBUG_SEVERITY_LOW:
-            return "LOW";
-        case GL_DEBUG_SEVERITY_NOTIFICATION:
-            return "NOTIFICATION";
-    }
-    return "unknown";
-}
-
-static void APIENTRY callback_opengl_debug(
-    GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
-    const GLchar* message, [[maybe_unused]] const void* userParam)
-{
-    // The memory formessageis owned and managed by the GL, and should onlybe
-    // considered valid for the duration of the function call.The behavior of
-    // calling any GL or window system function from within thecallback function
-    // is undefined and may lead to program termination.Care must also be taken
-    // in securing debug callbacks for use with asynchronousdebug output by
-    // multi-threaded GL implementations.  Section 18.8 describes thisin further
-    // detail.
-
-    auto& buff{ local_log_buff };
-    int   num_chars = std::snprintf(
-        buff.data(), buff.size(), "%s %s %d %s %.*s\n", source_to_strv(source),
-        type_to_strv(type), id, severity_to_strv(severity), length, message);
-
-    if (num_chars > 0)
-    {
-        // TODO use https://en.cppreference.com/w/cpp/io/basic_osyncstream
-        // to fix possible data races
-        // now we use GL_DEBUG_OUTPUT_SYNCHRONOUS to garantie call in main
-        // thread
-        std::cerr.write(buff.data(), num_chars);
-    }
-}
 static std::ostream& operator<<(std::ostream& out, const SDL_version& v)
 {
     out << static_cast<int>(v.major) << ".";
@@ -153,6 +36,24 @@ std::istream& operator>>(std::istream& is, triangle& t)
     is >> t.v[1];
     is >> t.v[2];
     return is;
+}
+
+std::ostream& operator<<(std::ostream& stream, const vertex& v)
+{
+    stream << v.x << " " << v.y << " " << v.z << std::endl;
+    stream << v.r << " " << v.g << " " << v.b;
+    return stream;
+}
+
+std::ostream& operator<<(std::ostream& stream, const triangle& t)
+{
+    for (size_t iter = 0; iter < 3; ++iter)
+    {
+        stream << t.v[iter].x << " " << t.v[iter].y << " " << t.v[iter].z << " "
+               << t.v[iter].r << " " << t.v[iter].g << " " << t.v[iter].b
+               << std::endl;
+    }
+    return stream;
 }
 
 std::ostream& operator<<(std::ostream& stream, const event& e)
@@ -225,6 +126,7 @@ private:
     GLuint        program_id_ = 0;
     GLuint        VBO         = 0;
     GLuint        VAO         = 0;
+    GLuint        EBO         = 0;
     GLuint        shd_proc    = 0;
 
 public:
@@ -232,11 +134,13 @@ public:
 
     void genBuffers()
     {
-
         glGenBuffers(1, &VBO);
         OM_GL_CHECK()
 
         glGenVertexArrays(1, &VAO);
+        OM_GL_CHECK()
+
+        glGenBuffers(1, &EBO);
         OM_GL_CHECK()
     }
 
@@ -680,10 +584,19 @@ public:
         //            0.5f,  -0.5f, 0.0f, // правая вершина
         //            0.0f,  0.5f,  0.0f  // верхняя вершина
         //        };
+
+        unsigned int indices[] = { 0, 1, 2 };
         glBindVertexArray(VAO);
         OM_GL_CHECK()
 
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        OM_GL_CHECK()
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        OM_GL_CHECK()
+
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+                     GL_STATIC_DRAW);
         OM_GL_CHECK()
 
         glBufferData(GL_ARRAY_BUFFER, sizeof(t), &t.v, GL_STATIC_DRAW);
@@ -728,7 +641,12 @@ public:
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         OM_GL_CHECK()
 
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        // glPolygonMode(GL_FRONT_AND_BACK, 0);
+
+        glDrawElements(GL_LINE_LOOP, 3, GL_UNSIGNED_INT, 0
+                       /*reinterpret_cast<void*>(sizeof(float) * 3)*/);
+
+        // glDrawArrays(GL_TRIANGLES, 0, 3);
         OM_GL_CHECK()
     }
 

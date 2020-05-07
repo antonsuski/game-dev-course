@@ -11,7 +11,10 @@ cmake_minimum_required(VERSION 3.17)
 add_library(engine-shared SHARED src/engine.cxx
     include/engine.hxx
     include/glad/glad.c
-    include/glad/glad.h)
+    include/glad/glad.h
+    src/shader.cxx
+    include/shader.hxx
+    include/om_gl_check.hxx)
 
 find_package(SDL2 REQUIRED)
 

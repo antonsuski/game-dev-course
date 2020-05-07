@@ -6,12 +6,12 @@ file(GLOB
             CXX "src/*.cxx"
             HXX "include/*.hxx")
 
-add_library(engine-shared SHARED ${CXX})
+add_library(engine-shared-0 SHARED ${CXX})
 
 find_package(SDL2 REQUIRED)
 
-target_include_directories(engine-shared PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_compile_features(engine-shared PUBLIC cxx_std_17)
-target_link_libraries(engine-shared LINK_PRIVATE
+target_include_directories(engine-shared-0 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_compile_features(engine-shared-0 PUBLIC cxx_std_17)
+target_link_libraries(engine-shared-0 LINK_PRIVATE
     SDL2::SDL2
     SDL2::SDL2main)

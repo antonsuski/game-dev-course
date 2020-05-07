@@ -51,6 +51,17 @@ struct ENGINE_DECLSPEC vertex
         , b(0.f)
     {
     }
+
+    vertex(float x_, float y_, float z_, float r_, float g_, float b_)
+        : x(x_)
+        , y(y_)
+        , z(z_)
+        , r(r_)
+        , g(g_)
+        , b(b_)
+    {
+    }
+
     float x;
     float y;
     float z;
@@ -72,6 +83,8 @@ struct ENGINE_DECLSPEC triangle
 
 ENGINE_DECLSPEC std::istream& operator>>(std::istream& is, vertex&);
 ENGINE_DECLSPEC std::istream& operator>>(std::istream& is, triangle&);
+ENGINE_DECLSPEC std::ostream& operator<<(std::ostream& stream, const vertex&);
+ENGINE_DECLSPEC std::ostream& operator<<(std::ostream& stream, const triangle&);
 
 class ENGINE_DECLSPEC core
 {

@@ -5,4 +5,4 @@ project(03-game-loop-shared LANGUAGES CXX)
 add_executable(03-game-loop-shared game.cxx)
 
 target_link_libraries(03-game-loop-shared LINK_PUBLIC
-    engine-shared)
+    engine-shared-0)
