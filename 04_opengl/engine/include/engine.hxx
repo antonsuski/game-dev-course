@@ -23,6 +23,7 @@ public:
         start,
         button_1,
         button_2,
+        mouse_move,
         turn_off
     } key;
     std::string_view name;
@@ -81,6 +82,15 @@ struct ENGINE_DECLSPEC triangle
     vertex v[3];
 };
 
+struct ENGINE_DECLSPEC uniform
+{
+public:
+    float u0;
+    float u1;
+    float u2;
+    float u3;
+};
+
 ENGINE_DECLSPEC std::istream& operator>>(std::istream& is, vertex&);
 ENGINE_DECLSPEC std::istream& operator>>(std::istream& is, triangle&);
 ENGINE_DECLSPEC std::ostream& operator<<(std::ostream& stream, const vertex&);
@@ -89,15 +99,19 @@ ENGINE_DECLSPEC std::ostream& operator<<(std::ostream& stream, const triangle&);
 class ENGINE_DECLSPEC core
 {
 public:
-    virtual ~core()                                  = 0;
-    virtual bool init()                              = 0;
-    virtual bool read_event(event&)                  = 0;
-    virtual void render()                            = 0;
-    virtual void swap_buffers()                      = 0;
-    virtual void uninitialize()                      = 0;
-    virtual void render_triangle(const triangle&)    = 0;
-    virtual void render_my_triangle(const triangle&) = 0;
-    virtual bool init_my_opengl()                    = 0;
+    virtual ~core()                                    = 0;
+    virtual bool  init()                               = 0;
+    virtual bool  read_event(event&)                   = 0;
+    virtual void  render()                             = 0;
+    virtual void  swap_buffers()                       = 0;
+    virtual void  uninitialize()                       = 0;
+    virtual void  render_triangle(const triangle&)     = 0;
+    virtual void  render_my_triangle(const triangle&)  = 0;
+    virtual void  render_grid()                        = 0;
+    virtual void  sempling(const triangle& text_coord) = 0;
+    virtual float get_time_for_init()                  = 0;
+    virtual bool  init_my_opengl()                     = 0;
+    virtual bool  load_texture(std::string_view)       = 0;
 };
 ENGINE_DECLSPEC engine::core* create_engine();
 ENGINE_DECLSPEC void          destroy_engine(engine::core* e);

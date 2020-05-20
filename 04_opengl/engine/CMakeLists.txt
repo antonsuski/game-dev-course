@@ -14,7 +14,8 @@ add_library(engine-shared SHARED src/engine.cxx
     include/glad/glad.h
     src/shader.cxx
     include/shader.hxx
-    include/om_gl_check.hxx)
+    include/om_gl_check.hxx
+    include/picopng.hxx)
 
 find_package(SDL2 REQUIRED)
 

@@ -3,6 +3,7 @@
 #include "glad/glad.h"
 
 #include <array>
+#include <cassert>
 #include <iostream>
 
 #define OM_GL_CHECK()                                                          \

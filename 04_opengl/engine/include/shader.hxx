@@ -21,9 +21,6 @@ public:
     shader(const char*, const char*);
 
     void use();
-
-    void set_bool(const std::string_view&, bool) const;
-    void set_int(const std::string_view&, int) const;
-    void set_float(const std::string_view&, float) const;
+    void set_uniform();
 };
 } // namespace engine

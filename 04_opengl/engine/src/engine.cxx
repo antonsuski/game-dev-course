@@ -1,6 +1,7 @@
 #include "engine.hxx"
 #include "glad/glad.h"
 #include "om_gl_check.hxx"
+#include "picopng.hxx"
 
 #include <SDL.h>
 #include <algorithm>
@@ -8,6 +9,7 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#include <shader.hxx>
 
 static std::ostream& operator<<(std::ostream& out, const SDL_version& v)
 {
@@ -130,6 +132,25 @@ private:
     GLuint        shd_proc    = 0;
 
 public:
+    uniform tmp_uni;
+
+    void set_uniforms()
+    {
+        glUseProgram(shd_proc);
+        OM_GL_CHECK()
+
+        GLint uniform_id = glGetUniformLocation(shd_proc, "in_uniform");
+        OM_GL_CHECK()
+
+        // std::cout << uniform_id << std::endl;
+
+        glUseProgram(shd_proc);
+        OM_GL_CHECK()
+
+        glUniform4f(uniform_id, tmp_uni.u0, tmp_uni.u1, tmp_uni.u2, tmp_uni.u3);
+        OM_GL_CHECK()
+    }
+
     ~core_one() final override {}
 
     void genBuffers()
@@ -154,139 +175,29 @@ public:
         glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0,
                               nullptr, GL_TRUE);
 
+        glViewport(0, 0, 640, 480);
+        OM_GL_CHECK()
+
         // gen buffers
+
         genBuffers();
-        // vertex shader
 
-        std::string_view vertex_shader_src = R"(
-                #version 320 es
+        // gen shader
 
-                layout(location = 0) in vec3 pos;
-                layout(location = 1) in vec3 color;
+        // shader my_shd("default_shader.vs", "default_shader.fs");
+        // shader my_shd("1_shader.vs", "1_shader.fs");
+        shader my_shd("../../../04_opengl/1_shader.vs",
+                      "../../../04_opengl/default_shader.fs");
 
-                mediump out vec3 out_color;
+        my_shd.use();
+        shd_proc = my_shd.id;
+        set_uniforms();
+        // set uniforms
 
-                void main()
-                {
-                    gl_Position = vec4(pos, 1.0);
-                    out_color = color;
-                }
-                                             )";
-
-        const char* source      = vertex_shader_src.data();
-        GLuint      vert_shader = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vert_shader, 1, &source, nullptr);
+        int uniform_id = glGetUniformLocation(shd_proc, "in_uniform");
         OM_GL_CHECK()
 
-        glCompileShader(vert_shader);
-        OM_GL_CHECK()
-
-        GLint compiled_status = 0;
-        glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &compiled_status);
-        OM_GL_CHECK()
-
-        if (compiled_status == 0)
-        {
-            GLint info_len = 0;
-            glGetShaderiv(vert_shader, GL_INFO_LOG_LENGTH, &info_len);
-            OM_GL_CHECK()
-
-            std::vector<char> info_chars(static_cast<size_t>(info_len));
-            glGetShaderInfoLog(vert_shader, info_len, nullptr,
-                               info_chars.data());
-            OM_GL_CHECK()
-
-            glDeleteShader(vert_shader);
-            OM_GL_CHECK()
-
-            std::string shader_type_name = "vertex";
-            std::cerr << "Error compiling shader(vertex)\n"
-                      << vertex_shader_src << "\n"
-                      << info_chars.data();
-            return false;
-        }
-
-        // fragment shader
-
-        std::string_view frag_shader_src = R"(
-                #version 320 es
-
-                mediump out vec4 FragColor;
-                mediump in vec3 out_color;
-
-                void main()
-                {
-                    FragColor = vec4(out_color, 0.0);
-                }
-                )";
-
-        source             = frag_shader_src.data();
-        GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(frag_shader, 1, &source, nullptr);
-        OM_GL_CHECK()
-
-        glCompileShader(frag_shader);
-        OM_GL_CHECK()
-
-        compiled_status = 0;
-        glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &compiled_status);
-        OM_GL_CHECK()
-        if (compiled_status == 0)
-        {
-            GLint info_len = 0;
-            glGetShaderiv(frag_shader, GL_INFO_LOG_LENGTH, &info_len);
-            OM_GL_CHECK()
-
-            std::vector<char> info_chars(static_cast<size_t>(info_len));
-            glGetShaderInfoLog(frag_shader, info_len, nullptr,
-                               info_chars.data());
-            OM_GL_CHECK()
-
-            glDeleteShader(frag_shader);
-            OM_GL_CHECK()
-
-            std::cerr << "Error compiling shader(fragment)\n"
-                      << vertex_shader_src << "\n"
-                      << info_chars.data();
-            return false;
-        }
-
-        // create shader programm
-
-        shd_proc = glCreateProgram();
-        OM_GL_CHECK()
-        if (0 == shd_proc)
-        {
-            std::cerr << "failed to create gl program";
-            return false;
-        }
-
-        glAttachShader(shd_proc, vert_shader);
-        OM_GL_CHECK()
-
-        glAttachShader(shd_proc, frag_shader);
-        OM_GL_CHECK()
-
-        glLinkProgram(shd_proc);
-        OM_GL_CHECK()
-
-        GLint linked_status = 0;
-        glGetProgramiv(shd_proc, GL_LINK_STATUS, &linked_status);
-        OM_GL_CHECK()
-        if (linked_status == 0)
-        {
-            GLint infoLen = 0;
-            glGetProgramiv(shd_proc, GL_INFO_LOG_LENGTH, &infoLen);
-            OM_GL_CHECK()
-            std::vector<char> infoLog(static_cast<size_t>(infoLen));
-            glGetProgramInfoLog(shd_proc, infoLen, nullptr, infoLog.data());
-            OM_GL_CHECK()
-            std::cerr << "Error linking program:\n" << infoLog.data();
-            glDeleteProgram(shd_proc);
-            OM_GL_CHECK()
-            return false;
-        }
-        glUseProgram(shd_proc);
+        glUniform4f(uniform_id, tmp_uni.u0, tmp_uni.u1, tmp_uni.u2, tmp_uni.u3);
         OM_GL_CHECK()
 
         glEnable(GL_DEPTH_TEST);
@@ -514,6 +425,7 @@ public:
         }
         return init_my_opengl();
     }
+
     bool read_event(event& e) final override
     {
         SDL_Event sdl_event;
@@ -546,6 +458,35 @@ public:
                     return true;
                 }
             }
+            if (sdl_event.type == SDL_MOUSEMOTION)
+            {
+                float original_x = sdl_event.motion.x;
+                float original_y = sdl_event.motion.y;
+                float x = 0.0, y = 0.0;
+
+                int width = 0, height = 0;
+                SDL_GetWindowSize(window, &width, &height);
+                if (width == 0 || height == 0)
+                {
+                    throw std::runtime_error(
+                        "Error! Cannot get window's size.");
+                }
+
+                // float x_center = float(width) / 2.0f;
+                // float y_center = float(height) / 2.0f;
+                x = original_x / float(width) * 2.0f - 1.0f;
+                y = original_y / float(height) * 2.0f - 1.0f;
+                y *= -1.0f;
+                tmp_uni.u0 = x;
+                tmp_uni.u1 = y;
+                tmp_uni.u2 = 0.4f;
+                tmp_uni.u3 = 1.0f;
+                std::cout << " m_move_x: " << x << ";"
+                          << "m_move_y: " << y << std::endl;
+
+                e.key = event::mouse_move;
+                return true;
+            }
         }
         return false;
     }
@@ -577,50 +518,122 @@ public:
         SDL_Quit();
     }
 
+    std::vector<engine::vertex> make_grid_(size_t x, size_t y,
+                                           std::vector<uint32_t>& indexes_v)
+    {
+        engine::triangle            tr;
+        std::vector<engine::vertex> vert_arr;
+
+        const float x_offset = 2.0f / static_cast<float>(x - 1);
+        const float y_offset = 2.0f / static_cast<float>(y - 1);
+        const float x_start  = -1.0f;
+        const float y_start  = 1.0f;
+
+        //        int   x_count = 639 / 10;
+        //        int   y_count = 379 / 10;
+        //        float x_step  = 2.0f / float(x_count);
+        //        float y_step  = 2.0f / float(y_count);
+
+        for (size_t iterator_y = 0; iterator_y < y; ++iterator_y)
+        {
+            for (size_t iterator_x = 0; iterator_x < x; ++iterator_x)
+            {
+                engine::vertex tmp(
+                    x_start + static_cast<float>(iterator_x) * x_offset,
+                    y_start - static_cast<float>(iterator_y) * y_offset, 0.f,
+                    1.f, 1.f, 1.f);
+                vert_arr.push_back(tmp);
+            }
+        }
+
+        for (size_t j = 0; j < y - 1; ++j)
+        {
+            for (size_t i = 0; i < x - 1; ++i)
+            {
+                uint16_t v0 = j * x + i;
+                uint16_t v1 = v0 + 1;
+                uint16_t v2 = v0 + x;
+                uint16_t v3 = v2 + 1;
+
+                // add two triangles
+                //  v0-----v1
+                //  |     /|
+                //  |    / |
+                //  |   /  |
+                //  |  /   |
+                //  | /    |
+                //  v2-----v3
+                // we want only cells without internal color fill
+                // so generate "triangle" for every age
+
+                indexes_v.insert(end(indexes_v), { v0, v1, v2 });
+                indexes_v.insert(end(indexes_v), { v2, v1, v3 });
+            }
+        }
+        indexes_v.push_back(x * y - x);
+
+        //        for (auto i : vert_arr)
+        //        {
+        //            std::cout << "pos: " << i.x << " " << i.y << " " << i.z <<
+        //            '\n'; std::cout << "col: " << i.r << " " << i.g << " " <<
+        //            i.b << " "
+        //                      << std::endl;
+        //        }
+        //        int counter = 0;
+        //        for (auto i : indexes_v)
+        //        {
+        //            ++counter;
+        //            std::cout << i << " ";
+        //            if (counter == 3)
+        //            {
+        //                counter = 0;
+        //                std::cout << std::endl;
+        //            }
+        //        }
+
+        return vert_arr;
+    }
+
     void render_my_triangle(const triangle& t) final override
     {
-        //        float vertices[] = {
-        //            -0.5f, -0.5f, 0.0f, // левая вершина
-        //            0.5f,  -0.5f, 0.0f, // правая вершина
-        //            0.0f,  0.5f,  0.0f  // верхняя вершина
-        //        };
+        set_uniforms();
 
-        unsigned int indices[] = { 0, 1, 2 };
+        std::vector<uint32_t>* indexes   = new std::vector<uint32_t>;
+        std::vector<vertex>    vert_buff = make_grid_(50, 50, *indexes);
+
+        indexes->push_back(0);
+        indexes->push_back(1);
+        indexes->push_back(2);
+
         glBindVertexArray(VAO);
         OM_GL_CHECK()
-
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         OM_GL_CHECK()
-
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
         OM_GL_CHECK()
-
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                     sizeof(uint32_t) * indexes->size(), indexes->data(),
                      GL_STATIC_DRAW);
         OM_GL_CHECK()
-
-        glBufferData(GL_ARRAY_BUFFER, sizeof(t), &t.v, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertex) * vert_buff.size(),
+                     vert_buff.data(), GL_STATIC_DRAW);
         OM_GL_CHECK()
-
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex),
                               nullptr);
         OM_GL_CHECK()
-
         glEnableVertexAttribArray(0);
         OM_GL_CHECK()
-
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(vertex),
                               reinterpret_cast<void*>(sizeof(float) * 3));
         OM_GL_CHECK()
-
         glEnableVertexAttribArray(1);
         OM_GL_CHECK()
-
         GLuint shd_proc_value = shd_proc;
-
         glValidateProgram(shd_proc_value);
         OM_GL_CHECK()
+
         // Check the validate status
+
         GLint validate_status = 0;
         glGetProgramiv(shd_proc_value, GL_VALIDATE_STATUS, &validate_status);
         OM_GL_CHECK()
@@ -638,15 +651,169 @@ public:
             throw std::runtime_error("error");
         }
 
+        // set_uniforms();
+
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         OM_GL_CHECK()
-
-        // glPolygonMode(GL_FRONT_AND_BACK, 0);
-
-        glDrawElements(GL_LINE_LOOP, 3, GL_UNSIGNED_INT, 0
-                       /*reinterpret_cast<void*>(sizeof(float) * 3)*/);
-
+        glDrawElements(GL_LINES, indexes->size(), GL_UNSIGNED_INT, 0);
         // glDrawArrays(GL_TRIANGLES, 0, 3);
+        OM_GL_CHECK()
+
+        delete indexes;
+    }
+
+    void render_grid() final override
+    {
+        set_uniforms();
+
+        std::vector<uint32_t>* indexes   = new std::vector<uint32_t>;
+        std::vector<vertex>    vert_buff = make_grid_(50, 50, *indexes);
+
+        indexes->push_back(0);
+        indexes->push_back(1);
+        indexes->push_back(2);
+
+        glBindVertexArray(VAO);
+        OM_GL_CHECK()
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        OM_GL_CHECK()
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        OM_GL_CHECK()
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                     sizeof(uint32_t) * indexes->size(), indexes->data(),
+                     GL_STATIC_DRAW);
+        OM_GL_CHECK()
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertex) * vert_buff.size(),
+                     vert_buff.data(), GL_STATIC_DRAW);
+        OM_GL_CHECK()
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex),
+                              nullptr);
+        OM_GL_CHECK()
+        glEnableVertexAttribArray(0);
+        OM_GL_CHECK()
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(vertex),
+                              reinterpret_cast<void*>(sizeof(float) * 3));
+        OM_GL_CHECK()
+        glEnableVertexAttribArray(1);
+        OM_GL_CHECK()
+        GLuint shd_proc_value = shd_proc;
+        glValidateProgram(shd_proc_value);
+        OM_GL_CHECK()
+
+        // Check the validate status
+
+        GLint validate_status = 0;
+        glGetProgramiv(shd_proc_value, GL_VALIDATE_STATUS, &validate_status);
+        OM_GL_CHECK()
+
+        if (validate_status == GL_FALSE)
+        {
+            GLint infoLen = 0;
+            glGetProgramiv(shd_proc_value, GL_INFO_LOG_LENGTH, &infoLen);
+            OM_GL_CHECK()
+            std::vector<char> infoLog(static_cast<size_t>(infoLen));
+            glGetProgramInfoLog(shd_proc_value, infoLen, nullptr,
+                                infoLog.data());
+            OM_GL_CHECK()
+            std::cerr << "Error linking program:\n" << infoLog.data();
+            throw std::runtime_error("error");
+        }
+
+        // set_uniforms();
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        OM_GL_CHECK()
+        glDrawElements(GL_LINES, indexes->size(), GL_UNSIGNED_INT, 0);
+        OM_GL_CHECK()
+
+        delete indexes;
+    }
+
+    float get_time_for_init() final override
+    {
+        std::uint32_t ms_from_library_initialization = SDL_GetTicks();
+        float         seconds = ms_from_library_initialization * 0.001f;
+        return seconds;
+    }
+
+    bool load_texture(std::string_view path) final override
+    {
+        std::vector<std::byte> png_file_in_memory;
+        std::ifstream          ifs(path.data(), std::ios_base::binary);
+        if (!ifs)
+        {
+            return false;
+        }
+        ifs.seekg(0, std::ios_base::end);
+        size_t pos_in_file = static_cast<size_t>(ifs.tellg());
+        png_file_in_memory.resize(pos_in_file);
+        ifs.seekg(0, std::ios_base::beg);
+        if (!ifs)
+        {
+            return false;
+        }
+
+        ifs.read(reinterpret_cast<char*>(png_file_in_memory.data()),
+                 static_cast<std::streamsize>(png_file_in_memory.size()));
+        if (!ifs.good())
+        {
+            return false;
+        }
+
+        std::vector<std::byte> image;
+        unsigned long          w = 0;
+        unsigned long          h = 0;
+        int error = decodePNG(image, w, h, &png_file_in_memory[0],
+                              png_file_in_memory.size(), false);
+
+        // if there's an error, display it
+        if (error != 0)
+        {
+            std::cerr << "error: " << error << std::endl;
+            return false;
+        }
+
+        GLuint tex_handl = 0;
+        glGenTextures(1, &tex_handl);
+        OM_GL_CHECK()
+        glBindTexture(GL_TEXTURE_2D, tex_handl);
+        OM_GL_CHECK()
+
+        GLint mipmap_level = 0;
+        GLint border       = 0;
+        // clang-format off
+        glTexImage2D(GL_TEXTURE_2D, // Specifies the target texture of the active texture unit
+                     mipmap_level,  // Specifies the level-of-detail number. Level 0 is the base image level
+                     GL_RGBA,       // Specifies the internal format of the texture
+                     static_cast<GLsizei>(w),
+                     static_cast<GLsizei>(h),
+                     border,        // Specifies the width of the border. Must be 0. For GLES 2.0
+                     GL_RGBA,       // Specifies the format of the texel data. Must match internalformat
+                     GL_UNSIGNED_BYTE, // Specifies the data type of the texel data
+                     &image[0]);    // Specifies a pointer to the image data in memory
+        // clang-format on
+        OM_GL_CHECK()
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        OM_GL_CHECK()
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        OM_GL_CHECK()
+        return true;
+    }
+
+    void sempling(const triangle& text_coord) final override
+    {
+        // set textures parameteries
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+        OM_GL_CHECK()
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+        OM_GL_CHECK()
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        OM_GL_CHECK()
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         OM_GL_CHECK()
     }
 
