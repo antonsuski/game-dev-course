@@ -21,7 +21,7 @@ static std::ostream& operator<<(std::ostream& out, const SDL_version& v)
 
 namespace engine
 {
-std::istream& operator>>(std::istream& is, vertex& v)
+std::istream& operator>>(std::istream& is, v_8& v)
 {
     is >> v.x;
     is >> v.y;
@@ -30,7 +30,7 @@ std::istream& operator>>(std::istream& is, vertex& v)
     is >> v.g;
     is >> v.b;
     is >> v.s;
-    is >> v.k;
+    is >> v.t;
     return is;
 }
 
@@ -42,10 +42,11 @@ std::istream& operator>>(std::istream& is, triangle& t)
     return is;
 }
 
-std::ostream& operator<<(std::ostream& stream, const vertex& v)
+std::ostream& operator<<(std::ostream& stream, const v_8& v)
 {
     stream << v.x << " " << v.y << " " << v.z << " " << v.r << " " << v.g << " "
-           << v.b << " " << v.s << " " << v.k << std::endl;
+           << v.b << " " << v.s << " " << v.t << std::endl;
+    return stream;
 }
 
 std::ostream& operator<<(std::ostream& stream, const triangle& t)
@@ -53,8 +54,8 @@ std::ostream& operator<<(std::ostream& stream, const triangle& t)
     for (size_t iter = 0; iter < 3; ++iter)
     {
         stream << t.v[iter].x << " " << t.v[iter].y << " " << t.v[iter].z << " "
-               << t.v[iter].r << " " << t.v[iter].g << " " << t.v[iter].b
-               << std::endl;
+               << t.v[iter].r << " " << t.v[iter].g << " " << t.v[iter].b << " "
+               << t.v[iter].s << " " << t.v[iter].t << std::endl;
     }
     return stream;
 }
@@ -196,14 +197,32 @@ public:
 
         my_shd.use();
         shd_proc = my_shd.id;
-        // set_uniforms();
-        // set uniforms
 
-        //        int uniform_id = glGetUniformLocation(shd_proc, "in_uniform");
-        //        OM_GL_CHECK()
+        int location = glGetUniformLocation(shd_proc, "ourTxt");
+        OM_GL_CHECK()
 
-        //        glUniform4f(uniform_id, tmp_uni.u0, tmp_uni.u1, tmp_uni.u2,
-        //        tmp_uni.u3); OM_GL_CHECK()
+        assert(-1 != location);
+        int texture_unit = 0;
+        glActiveTexture(GL_TEXTURE0 + texture_unit);
+        OM_GL_CHECK()
+
+        if (!load_texture("tank.png"))
+        {
+            return "failed load texture\n";
+        }
+        else
+        {
+            std::cout << "texture is loaded" << std::endl;
+        }
+
+        glUniform1i(location, 0 + texture_unit);
+        OM_GL_CHECK()
+
+        glEnable(GL_BLEND);
+        OM_GL_CHECK()
+
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        OM_GL_CHECK()
 
         glEnable(GL_DEPTH_TEST);
         OM_GL_CHECK()
@@ -523,11 +542,11 @@ public:
         SDL_Quit();
     }
 
-    std::vector<engine::vertex> make_grid_(size_t x, size_t y,
-                                           std::vector<uint32_t>& indexes_v)
+    std::vector<engine::v_8> make_grid_(size_t x, size_t y,
+                                        std::vector<uint32_t>& indexes_v)
     {
-        engine::triangle            tr;
-        std::vector<engine::vertex> vert_arr;
+        engine::triangle         tr;
+        std::vector<engine::v_8> vert_arr;
 
         const float x_offset = 2.0f / static_cast<float>(x - 1);
         const float y_offset = 2.0f / static_cast<float>(y - 1);
@@ -543,7 +562,7 @@ public:
         {
             for (size_t iterator_x = 0; iterator_x < x; ++iterator_x)
             {
-                engine::vertex tmp(
+                engine::v_8 tmp(
                     x_start + static_cast<float>(iterator_x) * x_offset,
                     y_start - static_cast<float>(iterator_y) * y_offset, 0.f,
                     1.f, 1.f, 1.f, 0.f, 0.f);
@@ -599,14 +618,10 @@ public:
         return vert_arr;
     }
 
-    void render_my_triangle(const triangle& t) final override
+    void render_my_triangle(const triangle& t, shader& shader_) final override
     {
-        set_uniforms();
-        shader my_shd("../../../04_opengl/default_shader.vs",
-                      "../../../04_opengl/default_shader.fs");
-
-        my_shd.use();
-        shd_proc = my_shd.id;
+        shader_.use();
+        shd_proc = shader_.id;
         set_uniforms();
         //  my_shd_is_ex
         std::vector<uint32_t>* indexes = new std::vector<uint32_t>;
@@ -629,19 +644,27 @@ public:
         glBufferData(GL_ARRAY_BUFFER, sizeof(t), &t, GL_STATIC_DRAW);
         OM_GL_CHECK()
 
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex),
-                              nullptr);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(v_8), nullptr);
         OM_GL_CHECK()
 
         glVertexAttribPointer(
-            1, 3, GL_FLOAT, GL_FALSE, sizeof(vertex),
+            1, 3, GL_FLOAT, GL_FALSE, sizeof(v_8),
             /*reinterpret_cast<void*>(sizeof(float) * 3)*/ nullptr);
         OM_GL_CHECK()
 
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex),
-                              nullptr);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(v_8),
+                              reinterpret_cast<void*>(3 * sizeof(float)));
+        OM_GL_CHECK()
 
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(v_8),
+                              reinterpret_cast<void*>(6 * sizeof(float)));
+        OM_GL_CHECK()
+
+        glEnableVertexAttribArray(0);
+        OM_GL_CHECK()
         glEnableVertexAttribArray(1);
+        OM_GL_CHECK()
+        glEnableVertexAttribArray(2);
         OM_GL_CHECK()
         GLuint shd_proc_value = shd_proc;
         glValidateProgram(shd_proc_value);
@@ -679,21 +702,14 @@ public:
 
     // bool my_shd_is_exist = false;
 
-    void render_grid() final override
+    void render_grid(shader& shader_) final override
     {
-        // if (!my_shd_is_exist)
-        //{
-        shader my_shd("../../../04_opengl/1_shader.vs",
-                      "../../../04_opengl/default_shader.fs");
-
-        my_shd.use();
-        shd_proc = my_shd.id;
+        shader_.use();
+        shd_proc = shader_.id;
         set_uniforms();
-        //  my_shd_is_exist = true;
-        // }
 
         std::vector<uint32_t>* indexes   = new std::vector<uint32_t>;
-        std::vector<vertex>    vert_buff = make_grid_(50, 50, *indexes);
+        std::vector<v_8>       vert_buff = make_grid_(70, 70, *indexes);
 
         indexes->push_back(0);
         indexes->push_back(1);
@@ -709,20 +725,22 @@ public:
                      sizeof(uint32_t) * indexes->size(), indexes->data(),
                      GL_STATIC_DRAW);
         OM_GL_CHECK()
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertex) * vert_buff.size(),
+        glBufferData(GL_ARRAY_BUFFER, sizeof(v_8) * vert_buff.size(),
                      vert_buff.data(), GL_STATIC_DRAW);
         OM_GL_CHECK()
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex),
-                              nullptr);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(v_8), nullptr);
         OM_GL_CHECK()
         glEnableVertexAttribArray(0);
         OM_GL_CHECK()
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(vertex),
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(v_8),
                               reinterpret_cast<void*>(sizeof(float) * 3));
         OM_GL_CHECK()
         glEnableVertexAttribArray(1);
         OM_GL_CHECK()
-        GLuint shd_proc_value = shd_proc;
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(v_8),
+                              reinterpret_cast<void*>(sizeof(float) * 2));
+        OM_GL_CHECK()
+        GLuint shd_proc_value = shader_.id;
         glValidateProgram(shd_proc_value);
         OM_GL_CHECK()
 
@@ -832,51 +850,6 @@ public:
         std::vector<float> txt_coord = { 1.0f, 1.0f, 1.0f, 0.0f,
                                          0.0f, 0.0f, 1.0f };
     }
-    // bool shd_tr = false;
-    void render_triangle(const triangle& t) final override
-    {
-        // if (!shd_tr)
-        //{
-        shader my_shd("../../../04_opengl/default_shader.vs",
-                      "../../../04_opengl/default_shader.fs");
-        // shader my_shd("1_shader.vs", "1_shader.fs");
-        // shader my_shd("../../../04_opengl/1_shader.vs",
-        //             "../../../04_opengl/default_shader.fs");
-
-        my_shd.use();
-        program_id_ = my_shd.id;
-        // shd_tr   = true;
-        //}
-        //        glBindVertexArray(VAO);
-        //        OM_GL_CHECK()
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        OM_GL_CHECK()
-
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex),
-                              &t.v[0]);
-        OM_GL_CHECK()
-        glEnableVertexAttribArray(0);
-        OM_GL_CHECK()
-        glValidateProgram(program_id_);
-        OM_GL_CHECK()
-        // Check the validate status
-        GLint validate_status = 0;
-        glGetProgramiv(program_id_, GL_VALIDATE_STATUS, &validate_status);
-        OM_GL_CHECK()
-        if (validate_status == GL_FALSE)
-        {
-            GLint infoLen = 0;
-            glGetProgramiv(program_id_, GL_INFO_LOG_LENGTH, &infoLen);
-            OM_GL_CHECK()
-            std::vector<char> infoLog(static_cast<size_t>(infoLen));
-            glGetProgramInfoLog(program_id_, infoLen, nullptr, infoLog.data());
-            OM_GL_CHECK()
-            std::cerr << "Error linking program:\n" << infoLog.data();
-            throw std::runtime_error("error");
-        }
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-        OM_GL_CHECK()
-    }
 };
 
 static bool already_exist = false;
@@ -898,10 +871,12 @@ void destroy_engine(core* e)
     {
         throw std::runtime_error("engine not created");
     }
+
     if (nullptr == e)
     {
         throw std::runtime_error("e is nullptr");
     }
+
     delete e;
 }
 

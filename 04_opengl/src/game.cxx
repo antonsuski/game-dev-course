@@ -41,19 +41,13 @@ int main(int /*argc*/, char* /*argv*/[])
         std::ifstream file("vertexes.txt");
         assert(!!file);
 
-        engine::triangle tr;
-        file >> tr;
+        engine::triangle tr1, tr2;
+        file >> tr1 >> tr2;
 
-        std::cout << tr;
+        engine->render_my_triangle(tr1);
+        engine->render_my_triangle(tr2);
 
-        // engine->render_triangle(tr);
-        // engine->render_grid();
         engine->render_grid();
-        // engine->render_my_triangle(tr);
-        // file >> tr;
-        // std::cout << tr << std::endl;
-        engine->render_triangle(tr);
-        // engine->render_my_triangle(tr);
 
         engine->swap_buffers();
     }

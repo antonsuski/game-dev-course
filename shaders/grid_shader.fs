@@ -1,5 +1,8 @@
-in vec4 v_position;
-in vec4 out_color;
+precision mediump float;
+
+varying vec4 v_position;
+varying vec4 out_color;
+varying vec2 out_txt_pos;
 
 uniform vec4 in_uniform;
 
@@ -26,5 +29,5 @@ void main() {
         b = def_color.b + (b - def_color.b);
 
 
-    FragColor = vec4(r, g, b, 1.0);
+    gl_FragColor = vec4(r, g, b, 1.0);
 }

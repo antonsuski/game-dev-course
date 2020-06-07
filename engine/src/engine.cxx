@@ -30,7 +30,7 @@ std::istream& operator>>(std::istream& is, v_8& v)
     is >> v.g;
     is >> v.b;
     is >> v.s;
-    is >> v.t;
+    is >> v.k;
     return is;
 }
 
@@ -45,8 +45,7 @@ std::istream& operator>>(std::istream& is, triangle& t)
 std::ostream& operator<<(std::ostream& stream, const v_8& v)
 {
     stream << v.x << " " << v.y << " " << v.z << " " << v.r << " " << v.g << " "
-           << v.b << " " << v.s << " " << v.t << std::endl;
-    return stream;
+           << v.b << " " << v.s << " " << v.k << std::endl;
 }
 
 std::ostream& operator<<(std::ostream& stream, const triangle& t)
@@ -54,8 +53,8 @@ std::ostream& operator<<(std::ostream& stream, const triangle& t)
     for (size_t iter = 0; iter < 3; ++iter)
     {
         stream << t.v[iter].x << " " << t.v[iter].y << " " << t.v[iter].z << " "
-               << t.v[iter].r << " " << t.v[iter].g << " " << t.v[iter].b << " "
-               << t.v[iter].s << " " << t.v[iter].t << std::endl;
+               << t.v[iter].r << " " << t.v[iter].g << " " << t.v[iter].b
+               << std::endl;
     }
     return stream;
 }
@@ -197,32 +196,14 @@ public:
 
         my_shd.use();
         shd_proc = my_shd.id;
+        // set_uniforms();
+        // set uniforms
 
-        int location = glGetUniformLocation(shd_proc, "ourTxt");
-        OM_GL_CHECK()
+        //        int uniform_id = glGetUniformLocation(shd_proc, "in_uniform");
+        //        OM_GL_CHECK()
 
-        assert(-1 != location);
-        int texture_unit = 0;
-        glActiveTexture(GL_TEXTURE0 + texture_unit);
-        OM_GL_CHECK()
-
-        if (!load_texture("tank.png"))
-        {
-            return "failed load texture\n";
-        }
-        else
-        {
-            std::cout << "texture is loaded" << std::endl;
-        }
-
-        glUniform1i(location, 0 + texture_unit);
-        OM_GL_CHECK()
-
-        glEnable(GL_BLEND);
-        OM_GL_CHECK()
-
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        OM_GL_CHECK()
+        //        glUniform4f(uniform_id, tmp_uni.u0, tmp_uni.u1, tmp_uni.u2,
+        //        tmp_uni.u3); OM_GL_CHECK()
 
         glEnable(GL_DEPTH_TEST);
         OM_GL_CHECK()
@@ -657,19 +638,10 @@ public:
             /*reinterpret_cast<void*>(sizeof(float) * 3)*/ nullptr);
         OM_GL_CHECK()
 
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(v_8),
-                              reinterpret_cast<void*>(3 * sizeof(float)));
-        OM_GL_CHECK()
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(v_8),
+                              nullptr);
 
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(v_8),
-                              reinterpret_cast<void*>(6 * sizeof(float)));
-        OM_GL_CHECK()
-
-        glEnableVertexAttribArray(0);
-        OM_GL_CHECK()
         glEnableVertexAttribArray(1);
-        OM_GL_CHECK()
-        glEnableVertexAttribArray(2);
         OM_GL_CHECK()
         GLuint shd_proc_value = shd_proc;
         glValidateProgram(shd_proc_value);

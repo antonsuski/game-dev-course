@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "engine.hxx"
+#include "shader.hxx"
 
 int main(int /*argc*/, char* /*argv*/[])
 {
@@ -19,6 +20,12 @@ int main(int /*argc*/, char* /*argv*/[])
         std::cerr << "init failed" << std::endl;
         return EXIT_FAILURE;
     }
+
+    engine::shader sh("../../../shaders/grid_shader.vs",
+                      "../../../shaders/grid_shader.fs");
+
+    engine::shader tr_sh("../../../04_opengl/default_shader.vs",
+                         "../../../04_opengl/default_shader.fs");
 
     bool continue_loop = true;
     while (continue_loop)
@@ -41,19 +48,13 @@ int main(int /*argc*/, char* /*argv*/[])
         std::ifstream file("vertexes.txt");
         assert(!!file);
 
-        engine::triangle tr;
-        file >> tr;
+        engine::triangle tr1, tr2;
+        file >> tr1 >> tr2;
 
-        std::cout << tr;
+        engine->render_grid(sh);
 
-        // engine->render_triangle(tr);
-        // engine->render_grid();
-        engine->render_grid();
-        // engine->render_my_triangle(tr);
-        // file >> tr;
-        // std::cout << tr << std::endl;
-        engine->render_triangle(tr);
-        // engine->render_my_triangle(tr);
+        engine->render_my_triangle(tr1, tr_sh);
+        engine->render_my_triangle(tr2, tr_sh);
 
         engine->swap_buffers();
     }

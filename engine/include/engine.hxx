@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include <iostream>
 #include <string_view>
 
@@ -41,9 +40,9 @@ public:
 
 ENGINE_DECLSPEC std::ostream& operator<<(std::ostream& stream, const event& e);
 
-struct ENGINE_DECLSPEC vertex
+struct ENGINE_DECLSPEC v_8
 {
-    vertex()
+    v_8()
         : x(0.f)
         , y(0.f)
         , z(0.f)
@@ -55,8 +54,8 @@ struct ENGINE_DECLSPEC vertex
     {
     }
 
-    vertex(float x_, float y_, float z_, float r_, float g_, float b_, float s_,
-           float k_)
+    v_8(float x_, float y_, float z_, float r_, float g_, float b_, float s_,
+        float k_)
         : x(x_)
         , y(y_)
         , z(z_)
@@ -83,11 +82,11 @@ struct ENGINE_DECLSPEC triangle
 {
     triangle()
     {
-        v[0] = vertex();
-        v[1] = vertex();
-        v[2] = vertex();
+        v[0] = v_8();
+        v[1] = v_8();
+        v[2] = v_8();
     }
-    vertex v[3];
+    v_8 v[3];
 };
 
 struct ENGINE_DECLSPEC uniform
@@ -99,9 +98,9 @@ public:
     float u3;
 };
 
-ENGINE_DECLSPEC std::istream& operator>>(std::istream& is, vertex&);
+ENGINE_DECLSPEC std::istream& operator>>(std::istream& is, v_8&);
 ENGINE_DECLSPEC std::istream& operator>>(std::istream& is, triangle&);
-ENGINE_DECLSPEC std::ostream& operator<<(std::ostream& stream, const vertex&);
+ENGINE_DECLSPEC std::ostream& operator<<(std::ostream& stream, const v_8&);
 ENGINE_DECLSPEC std::ostream& operator<<(std::ostream& stream, const triangle&);
 
 class ENGINE_DECLSPEC core
