@@ -1,7 +1,8 @@
 #include "engine.hxx"
 #include "glad/glad.h"
 #include "om_gl_check.hxx"
-#include "picopng.hxx"
+//#include "picopng.hxx"
+#include "stuff.hxx"
 
 #include <SDL.h>
 #include <algorithm>
@@ -21,45 +22,6 @@ static std::ostream& operator<<(std::ostream& out, const SDL_version& v)
 
 namespace engine
 {
-std::istream& operator>>(std::istream& is, v_8& v)
-{
-    is >> v.x;
-    is >> v.y;
-    is >> v.z;
-    is >> v.r;
-    is >> v.g;
-    is >> v.b;
-    is >> v.s;
-    is >> v.t;
-    return is;
-}
-
-std::istream& operator>>(std::istream& is, triangle& t)
-{
-    is >> t.v[0];
-    is >> t.v[1];
-    is >> t.v[2];
-    return is;
-}
-
-std::ostream& operator<<(std::ostream& stream, const v_8& v)
-{
-    stream << v.x << " " << v.y << " " << v.z << " " << v.r << " " << v.g << " "
-           << v.b << " " << v.s << " " << v.t << std::endl;
-    return stream;
-}
-
-std::ostream& operator<<(std::ostream& stream, const triangle& t)
-{
-    for (size_t iter = 0; iter < 3; ++iter)
-    {
-        stream << t.v[iter].x << " " << t.v[iter].y << " " << t.v[iter].z << " "
-               << t.v[iter].r << " " << t.v[iter].g << " " << t.v[iter].b << " "
-               << t.v[iter].s << " " << t.v[iter].t << std::endl;
-    }
-    return stream;
-}
-
 std::ostream& operator<<(std::ostream& stream, const event& e)
 {
     std::uint32_t value   = static_cast<std::uint32_t>(e.key);
@@ -144,9 +106,6 @@ public:
         GLint uniform_id = glGetUniformLocation(shd_proc, "in_uniform");
         OM_GL_CHECK()
 
-        GLuint uni_txt_id = glGetUniformLocation(shd_proc, "in_uniform_txt");
-        OM_GL_CHECK()
-
         // std::cout << uniform_id << std::endl;
 
         glUseProgram(shd_proc);
@@ -170,17 +129,15 @@ public:
         OM_GL_CHECK()
     }
 
-    bool init_my_opengl() final override
+    bool init_my_opengl(size_t w, size_t h) override
     {
-        // enable debug
-
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glDebugMessageCallback(callback_opengl_debug, nullptr);
         glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0,
                               nullptr, GL_TRUE);
 
-        glViewport(0, 0, 640, 480);
+        glViewport(0, 0, h, w);
         OM_GL_CHECK()
 
         // gen buffers
@@ -189,43 +146,44 @@ public:
 
         // gen shader
 
-        shader my_shd("../../../04_opengl/default_shader.vs",
-                      "../../../04_opengl/default_shader.fs");
-        // shader my_shd("1_shader.vs", "1_shader.fs");
-        // shader my_shd("../../../04_opengl/1_shader.vs",
-        //             "../../../04_opengl/default_shader.fs");
+        //        shader my_shd("../../../04_opengl/default_shader.vs",
+        //                      "../../../04_opengl/default_shader.fs");
+        //        // shader my_shd("1_shader.vs", "1_shader.fs");
+        //        // shader my_shd("../../../04_opengl/1_shader.vs",
+        //        //             "../../../04_opengl/default_shader.fs");
 
-        my_shd.use();
-        shd_proc = my_shd.id;
+        //        my_shd.use();
+        //        shd_proc = my_shd.id;
 
-        int location = glGetUniformLocation(shd_proc, "ourTxt");
-        OM_GL_CHECK()
+        //        int location = glGetUniformLocation(shd_proc, "ourTxt");
+        //        OM_GL_CHECK()
 
-        assert(-1 != location);
-        int texture_unit = 0;
-        glActiveTexture(GL_TEXTURE0 + texture_unit);
-        OM_GL_CHECK()
+        //        assert(-1 != location);
+        //        int texture_unit = 0;
+        //        glActiveTexture(GL_TEXTURE0 + texture_unit);
+        //        OM_GL_CHECK()
 
-        if (!load_texture("tank.png"))
-        {
-            return "failed load texture\n";
-        }
-        else
-        {
-            std::cout << "texture is loaded" << std::endl;
-        }
+        //        if (!load_texture("tank.png"))
+        //        {
+        //            return "failed load texture\n";
+        //        }
+        //        else
+        //        {
+        //            std::cout << "texture is loaded" << std::endl;
+        //        }
 
-        glUniform1i(location, 0 + texture_unit);
-        OM_GL_CHECK()
+        //        glUniform1i(location, 0 + texture_unit);
+        //        OM_GL_CHECK()
 
-        glEnable(GL_BLEND);
-        OM_GL_CHECK()
+        //        glEnable(GL_BLEND);
+        //        OM_GL_CHECK()
 
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        OM_GL_CHECK()
+        //        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        //        OM_GL_CHECK()
 
         glEnable(GL_DEPTH_TEST);
         OM_GL_CHECK()
+
         return true;
     }
 
@@ -377,13 +335,18 @@ public:
         return true;
     }
 
-    bool init() final override
+    bool init(size_t width, size_t height) final override
     {
         SDL_version compiled = { 0, 0, 0 };
         SDL_version linked   = { 0, 0, 0 };
 
         SDL_VERSION(&compiled)
         SDL_GetVersion(&linked);
+
+        if (width > 1366 || height > 768)
+        {
+            std::cerr << "uncorrect resolution";
+        }
 
         if (SDL_COMPILEDVERSION !=
             SDL_VERSIONNUM(linked.major, linked.minor, linked.patch))
@@ -401,7 +364,7 @@ public:
         else
         {
             window = SDL_CreateWindow("title", SDL_WINDOWPOS_CENTERED,
-                                      SDL_WINDOWPOS_CENTERED, 640, 480,
+                                      SDL_WINDOWPOS_CENTERED, height, width,
                                       SDL_WINDOW_OPENGL);
             if (window == nullptr)
             {
@@ -447,7 +410,7 @@ public:
                 std::clog << "error: failed to initialize glad" << std::endl;
             }
         }
-        return init_my_opengl();
+        return init_my_opengl(width, height);
     }
 
     bool read_event(event& e) final override
@@ -618,9 +581,11 @@ public:
         return vert_arr;
     }
 
-    void render_my_triangle(const triangle& t, shader& shader_) final override
+    void render_my_triangle(const triangle& t, shader& shader_,
+                            texture2d& txt) final override
     {
         shader_.use();
+        txt.bind();
         shd_proc = shader_.id;
         set_uniforms();
         //  my_shd_is_ex
@@ -807,8 +772,8 @@ public:
         std::vector<std::byte> image;
         unsigned long          w = 0;
         unsigned long          h = 0;
-        int error = decodePNG(image, w, h, &png_file_in_memory[0],
-                              png_file_in_memory.size(), false);
+        int error = 0; /*decodePNG(image, w, h, &png_file_in_memory[0],
+                                png_file_in_memory.size(), false);*/
 
         // if there's an error, display it
         if (error != 0)
@@ -844,11 +809,51 @@ public:
         OM_GL_CHECK()
         return true;
     }
-
-    void sempling(const triangle& text_coord) final override
+    // clang-format off
+    bool sempling_texture(int& texture_id,
+                          std::string_view texture_path,
+                          shader texture_shader) final override
+    // clang-format on
     {
-        std::vector<float> txt_coord = { 1.0f, 1.0f, 1.0f, 0.0f,
-                                         0.0f, 0.0f, 1.0f };
+        shader my_shd("../../../04_opengl/default_shader.vs",
+                      "../../../04_opengl/default_shader.fs");
+        // shader my_shd("1_shader.vs", "1_shader.fs");
+        // shader my_shd("../../../04_opengl/1_shader.vs",
+        //             "../../../04_opengl/default_shader.fs");
+
+        texture_shader.use();
+        shd_proc = texture_shader.id;
+
+        int location = glGetUniformLocation(shd_proc, "ourTxt");
+        texture_id   = location;
+        OM_GL_CHECK()
+
+        assert(-1 != location);
+        int texture_unit = 0;
+        glActiveTexture(GL_TEXTURE0 + texture_unit);
+        OM_GL_CHECK()
+
+        if (!load_texture(texture_path))
+        {
+            return false;
+        }
+        else
+        {
+            std::cout << "texture is loaded" << std::endl;
+        }
+
+        glUniform1i(location, 0 + texture_unit);
+        OM_GL_CHECK()
+
+        glEnable(GL_BLEND);
+        OM_GL_CHECK()
+
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        OM_GL_CHECK()
+
+        glEnable(GL_DEPTH_TEST);
+        OM_GL_CHECK()
+        return true;
     }
 };
 

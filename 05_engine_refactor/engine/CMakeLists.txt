@@ -8,14 +8,21 @@ cmake_minimum_required(VERSION 3.17)
 #            C "src/*.c"
 #           H "include/*.h")
 
-add_library(engine-shared SHARED src/engine.cxx
+add_library(engine-shared SHARED
+    src/engine.cxx
+    src/shader.cxx
+    src/texture2d.cxx
+    src/stuff.cxx
+    src/stb_image.cxx
     include/engine.hxx
     include/glad/glad.c
     include/glad/glad.h
-    src/shader.cxx
     include/shader.hxx
     include/om_gl_check.hxx
-    include/picopng.hxx)
+    include/picopng.hxx
+    include/stb_image.h
+    include/texture2d.hxx
+    include/stuff.hxx)
 
 find_package(SDL2 REQUIRED)
 

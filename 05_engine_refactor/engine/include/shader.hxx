@@ -18,7 +18,7 @@ class ENGINE_DECLSPEC shader
 public:
     unsigned int id;
 
-    shader(const char*, const char*);
+    explicit shader(const char*, const char*);
 
     void use();
     void set_uniform();
